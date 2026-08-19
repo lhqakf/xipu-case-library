@@ -228,7 +228,7 @@
             <span class="offer-text"><strong>${escapeHtml(caseItem.major)}</strong><span>${escapeHtml(caseItem.track)} · ${escapeHtml(app.country || "地区未注明")}</span></span>
           </div>
         </button>
-        <div class="case-footer"><span>${app.rank ? `院校排名 ${escapeHtml(app.rank)}` : escapeHtml(app.degree || "硕士")}</span><span class="result-badge ${resultClass(app.result)}">${escapeHtml(app.result)}</span></div>
+        <div class="case-footer"><span>${app.rank ? `QS排名 ${escapeHtml(app.rank)}` : escapeHtml(app.degree || "硕士")}</span><span class="result-badge ${resultClass(app.result)}">${escapeHtml(app.result)}</span></div>
       </article>
     `;
   }
@@ -317,7 +317,7 @@
             <div class="offer-meta">
               ${app.country ? `<span>${escapeHtml(app.country)}</span>` : ""}
               ${app.degree ? `<span>${escapeHtml(app.degree)}</span>` : ""}
-              ${app.rank ? `<span>排名 ${escapeHtml(app.rank)}</span>` : ""}
+              ${app.rank ? `<span>QS排名 ${escapeHtml(app.rank)}</span>` : ""}
               ${app.scholarship ? `<span>${escapeHtml(app.scholarship)}</span>` : ""}
             </div>
             ${links ? `<div class="offer-links">${links}</div>` : ""}
