@@ -94,6 +94,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .clear-search { position: absolute; right: 8px; top: 7px; width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
 .score-match-box { display: grid; grid-template-columns: repeat(3, 64px) 88px 76px; gap: 6px; }
 .score-match-box input { width: 64px; height: 48px; padding: 0 7px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white; }
+.score-match-box input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
+.score-match-box input[type="number"]::-webkit-inner-spin-button,
+.score-match-box input[type="number"]::-webkit-outer-spin-button { margin: 0; -webkit-appearance: none; }
 .score-match-box output { display: grid; place-items: center; width: 76px; height: 48px; border: 1px solid #cbd2d4; border-radius: 4px; color: #8a9499; background: #f7f8f8; white-space: nowrap; }
 .score-match-box output.has-value { color: var(--red-dark); font-weight: 800; background: white; }
 .score-match-box input.invalid { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
