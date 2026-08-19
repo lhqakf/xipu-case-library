@@ -13,8 +13,7 @@
   const saved = new Set(JSON.parse(localStorage.getItem("xipu-saved-cases") || "[]"));
   const state = {
     query: "",
-    majors: [...data.filters.majors],
-    majorSearchStarted: false,
+    majors: [],
     countries: [...data.filters.countries],
     year: "",
     track: "",
@@ -73,13 +72,12 @@
 
   function renderMajorOptions(search = $("#majorSearch").value) {
     const keyword = search.trim().toLocaleLowerCase("zh-CN");
-    const allSelected = state.majors.length === data.filters.majors.length;
     const searchInput = $("#majorSearch");
     const selectedLabel = state.majors.slice().sort(pinyinCollator.compare).join("、");
-    searchInput.placeholder = allSelected ? "全部专业" : state.majors.length ? (state.majors.length <= 4 ? selectedLabel : `已选 ${state.majors.length} 个专业`) : "未选择专业";
-    searchInput.title = allSelected ? "全部专业" : state.majors.join("、");
+    searchInput.placeholder = state.majors.length ? (state.majors.length <= 4 ? selectedLabel : `已选 ${state.majors.length} 个专业`) : "全部专业";
+    searchInput.title = state.majors.length ? selectedLabel : "全部专业";
     const visibleMajors = keyword ? sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword)) : sortedMajors;
-    const allVisibleSelected = visibleMajors.length > 0 && visibleMajors.every((major) => state.majors.includes(major));
+    const allVisibleSelected = keyword ? visibleMajors.length > 0 && visibleMajors.every((major) => state.majors.includes(major)) : state.majors.length === 0;
     elements.major.innerHTML = `
       <label class="country-option country-select-all">
         <input type="checkbox" value="__all__" ${allVisibleSelected ? "checked" : ""}>
@@ -144,7 +142,7 @@
     const filtered = data.cases.filter((caseItem) => {
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
-      if (state.majors.length !== data.filters.majors.length && !state.majors.includes(caseItem.major)) return false;
+      if (state.majors.length && !state.majors.includes(caseItem.major)) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
@@ -213,10 +211,7 @@
   function activeFilterEntries() {
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
-    if (state.majors.length !== data.filters.majors.length) {
-      if (state.majors.length) state.majors.slice().sort(pinyinCollator.compare).forEach((major) => entries.push([`major:${major}`, major]));
-      else entries.push(["majors", "本科专业：未选择"]);
-    }
+    if (state.majors.length) state.majors.slice().sort(pinyinCollator.compare).forEach((major) => entries.push([`major:${major}`, major]));
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
@@ -330,7 +325,7 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", majors: [...data.filters.majors], majorSearchStarted: false, countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
@@ -355,23 +350,10 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
-  let majorSearchTimer;
   $("#majorSearch").addEventListener("input", () => {
-    clearTimeout(majorSearchTimer);
     const search = $("#majorSearch").value.trim();
     if (search) setMajorDropdown(true);
     renderMajorOptions(search);
-    if (!search) return;
-    majorSearchTimer = setTimeout(() => {
-      const keyword = search.toLocaleLowerCase("zh-CN");
-      const matchedMajors = sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword));
-      if (!matchedMajors.length) return;
-      state.majors = state.majorSearchStarted ? [...new Set([...state.majors, ...matchedMajors])] : matchedMajors;
-      state.majorSearchStarted = true;
-      state.visible = 24;
-      renderMajorOptions(search);
-      render();
-    }, 300);
   });
   elements.major.addEventListener("change", (event) => {
     const input = event.target.closest("input");
@@ -380,14 +362,12 @@
       const search = $("#majorSearch").value.trim();
       const keyword = search.toLocaleLowerCase("zh-CN");
       const visibleMajors = search ? sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword)) : sortedMajors;
-      if (input.checked) state.majors = search ? (state.majorSearchStarted ? [...new Set([...state.majors, ...visibleMajors])] : visibleMajors) : [...data.filters.majors];
+      if (input.checked) state.majors = search ? [...new Set([...state.majors, ...visibleMajors])] : [];
       else state.majors = search ? state.majors.filter((major) => !visibleMajors.includes(major)) : [];
-      state.majorSearchStarted = search ? true : !input.checked;
       if (search) $("#majorSearch").value = "";
     }
     else if (input.checked) state.majors = [...new Set([...state.majors, input.value])];
     else state.majors = state.majors.filter((major) => major !== input.value);
-    if (input.value !== "__all__") state.majorSearchStarted = true;
     state.visible = 24;
     renderMajorOptions();
     render();
@@ -431,8 +411,7 @@
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
-    else if (key.startsWith("major:")) { state.majors = state.majors.filter((major) => major !== key.slice(6)); state.majorSearchStarted = true; renderMajorOptions(); }
-    else if (key === "majors") { state.majors = [...data.filters.majors]; state.majorSearchStarted = false; $("#majorSearch").value = ""; renderMajorOptions(""); }
+    else if (key.startsWith("major:")) { state.majors = state.majors.filter((major) => major !== key.slice(6)); renderMajorOptions(); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
     state.visible = 24;
     render();
@@ -446,22 +425,7 @@
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeDrawer(); closeMobileFilters(); $("#countryDropdown").open = false; setMajorDropdown(false); } });
   $("#mobileFilterButton").addEventListener("click", () => { elements.filters.classList.add("open"); elements.filterBackdrop.classList.add("open"); });
   elements.filterBackdrop.addEventListener("click", closeMobileFilters);
-  $("#applyMobileFilters").addEventListener("click", () => {
-    const search = $("#majorSearch").value.trim();
-    if (search) {
-      const keyword = search.toLocaleLowerCase("zh-CN");
-      const matchedMajors = sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword));
-      if (matchedMajors.length) {
-        state.majors = state.majorSearchStarted ? [...new Set([...state.majors, ...matchedMajors])] : matchedMajors;
-        state.majorSearchStarted = true;
-        $("#majorSearch").value = "";
-        state.visible = 24;
-        renderMajorOptions("");
-        render();
-      }
-    }
-    closeMobileFilters();
-  });
+  $("#applyMobileFilters").addEventListener("click", closeMobileFilters);
   function showSaved() { state.savedOnly = true; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   elements.savedButton.addEventListener("click", showSaved);
   elements.savedNav.addEventListener("click", showSaved);
