@@ -251,6 +251,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
   .results-toolbar h2 { font-size: 16px; }
   .sort-select span { display: none; }
   .sort-select select { width: 112px; }
+  .active-chips { display: flex; flex-wrap: nowrap; width: 100%; margin-top: 12px; padding: 0 0 6px; overflow-x: auto; overscroll-behavior-x: contain; scrollbar-width: thin; -webkit-overflow-scrolling: touch; }
+  .active-chips:empty { display: none; }
+  .active-chips .chip { flex: 0 0 auto; min-height: 34px; padding: 7px 10px; font-size: 12px; white-space: nowrap; }
   .case-grid { gap: 10px; }
   .case-card h3 { font-size: 16px; }
   .detail-drawer { width: 100%; }
