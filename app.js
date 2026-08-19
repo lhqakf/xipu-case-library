@@ -9,6 +9,7 @@
 
   const $ = (selector) => document.querySelector(selector);
   const number = new Intl.NumberFormat("zh-CN");
+  const pinyinCollator = new Intl.Collator("zh-CN-u-co-pinyin", { sensitivity: "base" });
   const saved = new Set(JSON.parse(localStorage.getItem("xipu-saved-cases") || "[]"));
   const state = {
     query: "",
@@ -92,7 +93,8 @@
     $("#metricPrograms").textContent = number.format(data.stats.programs);
     $("#metricOffers").textContent = number.format(data.stats.offers);
 
-    elements.major.insertAdjacentHTML("beforeend", optionMarkup(data.filters.majors));
+    const sortedMajors = [...data.filters.majors].sort(pinyinCollator.compare);
+    $("#majorOptions").innerHTML = optionMarkup(sortedMajors);
     renderCountryOptions();
     elements.year.insertAdjacentHTML("beforeend", optionMarkup(data.filters.years));
     elements.track.insertAdjacentHTML("beforeend", optionMarkup(data.filters.tracks));
@@ -118,7 +120,7 @@
     const filtered = data.cases.filter((caseItem) => {
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
-      if (state.major && caseItem.major !== state.major) return false;
+      if (state.major && !caseItem.major.toLocaleLowerCase("zh-CN").includes(state.major.toLocaleLowerCase("zh-CN"))) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
@@ -325,6 +327,11 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
+  let majorTimer;
+  elements.major.addEventListener("input", () => {
+    clearTimeout(majorTimer);
+    majorTimer = setTimeout(updateStateFromControls, 120);
+  });
   [elements.major, elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
   elements.country.addEventListener("change", (event) => {
     const input = event.target.closest("input");

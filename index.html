@@ -61,7 +61,8 @@
             <button id="resetFilters" type="button">重置</button>
           </div>
           <label class="field-label" for="majorFilter">本科专业</label>
-          <select id="majorFilter"><option value="">全部专业</option></select>
+          <input id="majorFilter" class="major-input" type="text" list="majorOptions" placeholder="全部专业" autocomplete="off">
+          <datalist id="majorOptions"></datalist>
 
           <span class="field-label" id="countryFilterLabel">申请国家或地区</span>
           <details class="country-dropdown" id="countryDropdown">
