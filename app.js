@@ -324,7 +324,7 @@
           </article>
         </div>
       </section>
-      <p class="privacy-note">隐私说明：源数据中的姓名及经历字段已脱敏。本案例严格对应 Excel 中的一行申请记录。</p>
+      <p class="privacy-note">隐私说明：源数据中的姓名及经历字段已脱敏。</p>
     `;
     elements.drawer.classList.add("open");
     elements.drawerBackdrop.classList.add("open");
