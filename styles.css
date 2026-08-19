@@ -116,11 +116,11 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .filters select, .sort-select select {
   width: 100%; height: 40px; padding: 0 32px 0 10px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white;
 }
-.major-combobox { position: relative; }
-.major-combobox-control { position: relative; }
-.major-combobox-control input { width: 100%; height: 40px; padding: 0 38px 0 10px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white; }
+.major-combobox { position: relative; width: 100%; }
+.major-combobox-control { display: grid; grid-template-columns: minmax(0, 1fr) 40px; width: 100%; height: 40px; border: 1px solid #cbd2d4; border-radius: 4px; overflow: hidden; background: white; }
+.major-combobox-control input { min-width: 0; width: 100%; height: 38px; padding: 0 0 0 10px; border: 0; outline: 0; color: var(--ink); background: transparent; box-sizing: border-box; }
 .major-combobox-control input::placeholder { color: var(--ink); opacity: 1; }
-.major-combobox-control button { position: absolute; top: 1px; right: 1px; width: 38px; height: 38px; border: 0; background: transparent; }
+.major-combobox-control button { position: relative; width: 40px; height: 38px; padding: 0; border: 0; background: transparent; }
 .major-combobox-control button::after { content: ""; position: absolute; top: 13px; right: 14px; width: 7px; height: 7px; border-right: 1.5px solid #687479; border-bottom: 1.5px solid #687479; transform: rotate(45deg); transition: transform .15s; }
 .major-combobox-control button.open::after { top: 17px; transform: rotate(225deg); }
 .major-dropdown-panel { width: 310px; max-width: calc(100vw - 32px); }
