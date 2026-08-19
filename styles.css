@@ -153,7 +153,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .year-tag { padding: 3px 6px; border-radius: 3px; color: var(--teal); background: #e8f2f1; font-size: 11px; font-weight: 800; }
 .case-card h3 { margin: 11px 35px 5px 0; font-size: 17px; line-height: 1.35; }
 .profile-line { color: var(--muted); font-size: 12px; }
-.score-strip { display: grid; grid-template-columns: repeat(3, 1fr); margin: 16px 0 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
+.score-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin: 16px 0 14px; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); }
 .score-item { padding: 10px 7px; border-right: 1px solid var(--line); }
 .score-item:first-child { padding-left: 0; }
 .score-item:last-child { border-right: 0; }
