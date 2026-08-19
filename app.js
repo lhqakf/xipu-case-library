@@ -13,7 +13,7 @@
   const saved = new Set(JSON.parse(localStorage.getItem("xipu-saved-cases") || "[]"));
   const state = {
     query: "",
-    major: "",
+    majors: [...data.filters.majors],
     countries: [...data.filters.countries],
     year: "",
     track: "",
@@ -68,6 +68,28 @@
     return values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
   }
 
+  const sortedMajors = [...data.filters.majors].sort(pinyinCollator.compare);
+
+  function renderMajorOptions(search = $("#majorSearch").value) {
+    const keyword = search.trim().toLocaleLowerCase("zh-CN");
+    const allSelected = state.majors.length === data.filters.majors.length;
+    const summary = $("#majorSummary");
+    summary.textContent = allSelected ? "全部专业" : state.majors.length ? `已选 ${state.majors.length} 个专业` : "未选择专业";
+    summary.title = allSelected ? "全部专业" : state.majors.join("、");
+    const visibleMajors = keyword ? sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword)) : sortedMajors;
+    elements.major.innerHTML = `
+      <label class="country-option country-select-all">
+        <input type="checkbox" value="__all__" ${allSelected ? "checked" : ""}>
+        <span>全选</span>
+      </label>
+    ` + visibleMajors.map((major) => `
+      <label class="country-option">
+        <input type="checkbox" name="majorFilter" value="${escapeHtml(major)}" ${state.majors.includes(major) ? "checked" : ""}>
+        <span>${escapeHtml(major)}</span>
+      </label>
+    `).join("");
+  }
+
   function renderCountryOptions() {
     const summary = $("#countrySummary");
     const allSelected = state.countries.length === data.filters.countries.length;
@@ -93,8 +115,7 @@
     $("#metricPrograms").textContent = number.format(data.stats.programs);
     $("#metricOffers").textContent = number.format(data.stats.offers);
 
-    const sortedMajors = [...data.filters.majors].sort(pinyinCollator.compare);
-    $("#majorOptions").innerHTML = optionMarkup(sortedMajors);
+    renderMajorOptions();
     renderCountryOptions();
     elements.year.insertAdjacentHTML("beforeend", optionMarkup(data.filters.years));
     elements.track.insertAdjacentHTML("beforeend", optionMarkup(data.filters.tracks));
@@ -120,7 +141,7 @@
     const filtered = data.cases.filter((caseItem) => {
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
-      if (state.major && !caseItem.major.toLocaleLowerCase("zh-CN").includes(state.major.toLocaleLowerCase("zh-CN"))) return false;
+      if (state.majors.length !== data.filters.majors.length && !state.majors.includes(caseItem.major)) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
@@ -188,7 +209,7 @@
   function activeFilterEntries() {
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
-    if (state.major) entries.push(["major", state.major]);
+    if (state.majors.length !== data.filters.majors.length) entries.push(["majors", `本科专业：${state.majors.length ? `已选 ${state.majors.length} 个` : "未选择"}`]);
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
@@ -291,7 +312,6 @@
   }
 
   function updateStateFromControls() {
-    state.major = elements.major.value;
     state.year = elements.year.value;
     state.track = elements.track.value;
     state.result = elements.result.value;
@@ -303,9 +323,10 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", major: "", countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [...data.filters.majors], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
     elements.search.value = "";
-    elements.major.value = "";
+    $("#majorSearch").value = "";
+    renderMajorOptions("");
     renderCountryOptions();
     elements.year.value = "";
     elements.track.value = "";
@@ -327,12 +348,20 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
-  let majorTimer;
-  elements.major.addEventListener("input", () => {
-    clearTimeout(majorTimer);
-    majorTimer = setTimeout(updateStateFromControls, 120);
+  $("#majorSearch").addEventListener("input", () => {
+    renderMajorOptions($("#majorSearch").value);
   });
-  [elements.major, elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
+  elements.major.addEventListener("change", (event) => {
+    const input = event.target.closest("input");
+    if (!input) return;
+    if (input.value === "__all__") state.majors = input.checked ? [...data.filters.majors] : [];
+    else if (input.checked) state.majors = [...new Set([...state.majors, input.value])];
+    else state.majors = state.majors.filter((major) => major !== input.value);
+    state.visible = 24;
+    renderMajorOptions();
+    render();
+  });
+  [elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
   elements.country.addEventListener("change", (event) => {
     const input = event.target.closest("input");
     if (!input) return;
@@ -343,8 +372,9 @@
     render();
   });
   document.addEventListener("click", (event) => {
-    const dropdown = $("#countryDropdown");
-    if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
+    [$("#countryDropdown"), $("#majorDropdown")].forEach((dropdown) => {
+      if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
+    });
   });
   elements.score.addEventListener("input", () => { elements.scoreOutput.textContent = elements.score.value === "50" ? "不限" : elements.score.value; });
   elements.score.addEventListener("change", updateStateFromControls);
@@ -364,6 +394,7 @@
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
+    else if (key === "majors") { state.majors = [...data.filters.majors]; $("#majorSearch").value = ""; renderMajorOptions(""); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
     state.visible = 24;
     render();
@@ -374,7 +405,7 @@
   });
   $("#closeDrawer").addEventListener("click", closeDrawer);
   elements.drawerBackdrop.addEventListener("click", closeDrawer);
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeDrawer(); closeMobileFilters(); } });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeDrawer(); closeMobileFilters(); $("#countryDropdown").open = false; $("#majorDropdown").open = false; } });
   $("#mobileFilterButton").addEventListener("click", () => { elements.filters.classList.add("open"); elements.filterBackdrop.classList.add("open"); });
   elements.filterBackdrop.addEventListener("click", closeMobileFilters);
   $("#applyMobileFilters").addEventListener("click", closeMobileFilters);
