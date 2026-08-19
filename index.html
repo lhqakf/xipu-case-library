@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#b51f36">
   <title>西浦录取案例库</title>
-  <link rel="stylesheet" href="styles.css?v=20260819-10">
+  <link rel="stylesheet" href="styles.css?v=20260819-11">
 </head>
 <body>
   <header class="app-header">
@@ -51,6 +51,12 @@
           <input id="searchInput" type="search" placeholder="搜索院校、项目或本科专业" autocomplete="off">
           <button id="clearSearch" class="clear-search" type="button" title="清空搜索" aria-label="清空搜索">×</button>
         </label>
+        <div class="score-match-box" aria-label="三年成绩匹配">
+          <input id="matchY1" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大一" aria-label="大一成绩">
+          <input id="matchY2" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大二" aria-label="大二成绩">
+          <input id="matchY3" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大三" aria-label="大三成绩">
+          <button id="matchScores" type="button">成绩匹配</button>
+        </div>
         <button id="mobileFilterButton" class="filter-trigger" type="button">筛选 <span id="activeFilterCount">0</span></button>
       </div>
 
@@ -149,7 +155,7 @@
     <button class="mobile-nav-item" id="savedNav" type="button"><span>♡</span>收藏</button>
   </nav>
 
-  <script src="data.js?v=20260819-10"></script>
-  <script src="app.js?v=20260819-10"></script>
+  <script src="data.js?v=20260819-11"></script>
+  <script src="app.js?v=20260819-11"></script>
 </body>
 </html>

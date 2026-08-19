@@ -20,6 +20,8 @@
     result: "",
     minScore: 50,
     completeScores: false,
+    scoreMatch: false,
+    matchScores: { y1: null, y2: null, y3: null },
     sort: "recent",
     savedOnly: false,
     visible: 24,
@@ -28,6 +30,10 @@
   const elements = {
     search: $("#searchInput"),
     clearSearch: $("#clearSearch"),
+    matchY1: $("#matchY1"),
+    matchY2: $("#matchY2"),
+    matchY3: $("#matchY3"),
+    matchButton: $("#matchScores"),
     major: $("#majorFilter"),
     country: $("#countryFilter"),
     year: $("#yearFilter"),
@@ -150,6 +156,7 @@
       const average = numeric(caseItem.scores.average, null);
       if (state.minScore > 50 && (average === null || average < state.minScore)) return false;
       if (state.completeScores && !(caseItem.scores.y1 && caseItem.scores.y2 && caseItem.scores.y3)) return false;
+      if (state.scoreMatch && [caseItem.scores.y1, caseItem.scores.y2, caseItem.scores.y3].some((value) => numeric(value, null) === null)) return false;
       if (query) {
         const haystack = [
           caseItem.id,
@@ -165,6 +172,21 @@
     });
 
     filtered.sort((a, b) => {
+      if (state.scoreMatch) {
+        const target = state.matchScores;
+        const targetAverage = (target.y1 + target.y2 + target.y3) / 3;
+        const differences = (item) => {
+          const y1 = numeric(item.scores.y1, 0);
+          const y2 = numeric(item.scores.y2, 0);
+          const y3 = numeric(item.scores.y3, 0);
+          const average = numeric(item.scores.average, (y1 + y2 + y3) / 3);
+          return [Math.abs(average - targetAverage), Math.abs(y3 - target.y3), Math.abs(y2 - target.y2), Math.abs(y1 - target.y1)];
+        };
+        const aDiff = differences(a);
+        const bDiff = differences(b);
+        for (let index = 0; index < aDiff.length; index += 1) if (aDiff[index] !== bDiff[index]) return aDiff[index] - bDiff[index];
+        return a.id.localeCompare(b.id);
+      }
       if (state.sort === "score") return numeric(b.scores.average, -1) - numeric(a.scores.average, -1);
       if (state.sort === "rank") return numeric(a.application.rank, 99999) - numeric(b.application.rank, 99999);
       return numeric(b.year, -1) - numeric(a.year, -1) || a.id.localeCompare(b.id);
@@ -218,6 +240,7 @@
     if (state.result) entries.push(["result", state.result]);
     if (state.minScore > 50) entries.push(["minScore", `均分 ≥ ${state.minScore}`]);
     if (state.completeScores) entries.push(["completeScores", "三年成绩完整"]);
+    if (state.scoreMatch) entries.push(["scoreMatch", `成绩匹配：大一 ${state.matchScores.y1}、大二 ${state.matchScores.y2}、大三 ${state.matchScores.y3}`]);
     return entries;
   }
 
@@ -325,7 +348,7 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, scoreMatch: false, matchScores: { y1: null, y2: null, y3: null }, savedOnly: false, visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
@@ -336,6 +359,7 @@
     elements.score.value = "50";
     elements.scoreOutput.textContent = "不限";
     elements.completeScores.checked = false;
+    [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); });
     render();
   }
 
@@ -350,6 +374,17 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
+  elements.matchButton.addEventListener("click", () => {
+    const inputs = [elements.matchY1, elements.matchY2, elements.matchY3];
+    const values = inputs.map((input) => Number.parseFloat(input.value));
+    const valid = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
+    inputs.forEach((input, index) => input.classList.toggle("invalid", !Number.isFinite(values[index]) || values[index] < 0 || values[index] > 100));
+    if (!valid) { inputs.find((input) => input.classList.contains("invalid"))?.focus(); return; }
+    state.matchScores = { y1: values[0], y2: values[1], y3: values[2] };
+    state.scoreMatch = true;
+    state.visible = 24;
+    render();
+  });
   $("#majorSearch").addEventListener("input", () => {
     const search = $("#majorSearch").value.trim();
     if (search) setMajorDropdown(true);
@@ -410,6 +445,7 @@
     if (key === "query") elements.search.value = "";
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
+    else if (key === "scoreMatch") { state.scoreMatch = false; state.matchScores = { y1: null, y2: null, y3: null }; [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); }); }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
     else if (key.startsWith("major:")) { state.majors = state.majors.filter((major) => major !== key.slice(6)); renderMajorOptions(); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
