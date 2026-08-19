@@ -14,7 +14,7 @@
   const state = {
     query: "",
     majors: [...data.filters.majors],
-    majorQuery: "",
+    majorSearchStarted: false,
     countries: [...data.filters.countries],
     year: "",
     track: "",
@@ -143,7 +143,6 @@
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
       if (state.majors.length !== data.filters.majors.length && !state.majors.includes(caseItem.major)) return false;
-      if (state.majorQuery && !caseItem.major.toLocaleLowerCase("zh-CN").includes(state.majorQuery.toLocaleLowerCase("zh-CN"))) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
@@ -211,12 +210,7 @@
   function activeFilterEntries() {
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
-    if (state.majors.length !== data.filters.majors.length) entries.push(["majors", `本科专业：${state.majors.length ? `已选 ${state.majors.length} 个` : "未选择"}`]);
-    if (state.majorQuery) {
-      const keyword = state.majorQuery.toLocaleLowerCase("zh-CN");
-      const matchedMajors = sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword));
-      entries.push(["majorQuery", `专业搜索：${matchedMajors.length ? matchedMajors.join("、") : state.majorQuery}`]);
-    }
+    if (state.majors.length !== data.filters.majors.length) entries.push(["majors", `本科专业：${state.majors.length ? state.majors.slice().sort(pinyinCollator.compare).join("、") : "未选择"}`]);
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
@@ -330,7 +324,7 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", majors: [...data.filters.majors], majorQuery: "", countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [...data.filters.majors], majorSearchStarted: false, countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
@@ -355,18 +349,30 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
+  let majorSearchTimer;
   $("#majorSearch").addEventListener("input", () => {
-    state.majorQuery = $("#majorSearch").value.trim();
-    state.visible = 24;
-    renderMajorOptions($("#majorSearch").value);
-    render();
+    clearTimeout(majorSearchTimer);
+    const search = $("#majorSearch").value.trim();
+    renderMajorOptions(search);
+    if (!search) return;
+    majorSearchTimer = setTimeout(() => {
+      const keyword = search.toLocaleLowerCase("zh-CN");
+      const matchedMajors = sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword));
+      if (!matchedMajors.length) return;
+      state.majors = state.majorSearchStarted ? [...new Set([...state.majors, ...matchedMajors])] : matchedMajors;
+      state.majorSearchStarted = true;
+      state.visible = 24;
+      renderMajorOptions(search);
+      render();
+    }, 300);
   });
   elements.major.addEventListener("change", (event) => {
     const input = event.target.closest("input");
     if (!input) return;
-    if (input.value === "__all__") state.majors = input.checked ? [...data.filters.majors] : [];
+    if (input.value === "__all__") { state.majors = input.checked ? [...data.filters.majors] : []; state.majorSearchStarted = !input.checked; }
     else if (input.checked) state.majors = [...new Set([...state.majors, input.value])];
     else state.majors = state.majors.filter((major) => major !== input.value);
+    if (input.value !== "__all__") state.majorSearchStarted = true;
     state.visible = 24;
     renderMajorOptions();
     render();
@@ -410,8 +416,7 @@
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
-    else if (key === "majors") { state.majors = [...data.filters.majors]; $("#majorSearch").value = ""; renderMajorOptions(""); }
-    else if (key === "majorQuery") { state.majorQuery = ""; $("#majorSearch").value = ""; renderMajorOptions(""); }
+    else if (key === "majors") { state.majors = [...data.filters.majors]; state.majorSearchStarted = false; $("#majorSearch").value = ""; renderMajorOptions(""); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
     state.visible = 24;
     render();
