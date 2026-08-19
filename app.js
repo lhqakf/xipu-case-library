@@ -212,7 +212,11 @@
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
     if (state.majors.length !== data.filters.majors.length) entries.push(["majors", `本科专业：${state.majors.length ? `已选 ${state.majors.length} 个` : "未选择"}`]);
-    if (state.majorQuery) entries.push(["majorQuery", `专业搜索：${state.majorQuery}`]);
+    if (state.majorQuery) {
+      const keyword = state.majorQuery.toLocaleLowerCase("zh-CN");
+      const matchedMajors = sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword));
+      entries.push(["majorQuery", `专业搜索：${matchedMajors.length ? matchedMajors.join("、") : state.majorQuery}`]);
+    }
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
