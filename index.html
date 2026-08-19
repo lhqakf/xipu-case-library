@@ -63,8 +63,13 @@
           <label class="field-label" for="majorFilter">本科专业</label>
           <select id="majorFilter"><option value="">全部专业</option></select>
 
-          <label class="field-label" for="countryFilter">申请国家或地区</label>
-          <select id="countryFilter"><option value="">全部国家或地区</option></select>
+          <span class="field-label" id="countryFilterLabel">申请国家或地区</span>
+          <details class="country-dropdown" id="countryDropdown">
+            <summary id="countrySummary">全部国家或地区</summary>
+            <div class="country-dropdown-panel">
+              <div id="countryFilter" class="country-options" role="group" aria-labelledby="countryFilterLabel"></div>
+            </div>
+          </details>
 
           <div class="filter-pair">
             <div>

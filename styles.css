@@ -101,6 +101,18 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .filter-heading h2 { margin: 0; font-size: 18px; }
 .filter-heading button, .empty-state button { border: 0; padding: 4px 0; color: var(--red); background: transparent; }
 .field-label { display: block; margin: 16px 0 7px; color: #4e5a60; font-size: 12px; font-weight: 700; }
+.country-dropdown { position: relative; }
+.country-dropdown summary { position: relative; display: block; height: 40px; padding: 10px 32px 0 10px; border: 1px solid #cbd2d4; border-radius: 4px; overflow: hidden; color: var(--ink); background: white; text-overflow: ellipsis; white-space: nowrap; cursor: pointer; list-style: none; font-size: 13px; }
+.country-dropdown summary::-webkit-details-marker { display: none; }
+.country-dropdown summary::after { content: ""; position: absolute; top: 15px; right: 12px; width: 7px; height: 7px; border-right: 1.5px solid #687479; border-bottom: 1.5px solid #687479; transform: rotate(45deg); transition: transform .15s; }
+.country-dropdown[open] summary::after { top: 18px; transform: rotate(225deg); }
+.country-dropdown-panel { position: absolute; top: calc(100% + 5px); left: 0; z-index: 20; width: 100%; padding: 8px; border: 1px solid #cbd2d4; border-radius: 4px; background: white; box-shadow: 0 9px 24px rgba(23,32,37,.13); }
+.country-options { display: grid; grid-template-columns: 1fr 1fr; max-height: 190px; overflow-y: auto; background: white; }
+.country-select-all { grid-column: 1 / -1; margin-bottom: 3px; border-bottom: 1px solid var(--line); font-weight: 700; }
+.country-option { display: flex; align-items: center; gap: 6px; min-width: 0; padding: 5px 4px; color: #475258; font-size: 12px; cursor: pointer; }
+.country-option:hover { background: #f3f6f5; }
+.country-option input { flex: 0 0 auto; width: 14px; height: 14px; margin: 0; accent-color: var(--red); }
+.country-option span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .filters select, .sort-select select {
   width: 100%; height: 40px; padding: 0 32px 0 10px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white;
 }

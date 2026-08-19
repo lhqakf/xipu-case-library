@@ -13,7 +13,7 @@
   const state = {
     query: "",
     major: "",
-    country: "",
+    countries: [...data.filters.countries],
     year: "",
     track: "",
     result: "",
@@ -67,6 +67,24 @@
     return values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
   }
 
+  function renderCountryOptions() {
+    const summary = $("#countrySummary");
+    const allSelected = state.countries.length === data.filters.countries.length;
+    summary.textContent = allSelected ? "全部国家或地区" : state.countries.length ? state.countries.join("、") : "未选择国家或地区";
+    summary.title = summary.textContent;
+    elements.country.innerHTML = `
+      <label class="country-option country-select-all">
+        <input type="checkbox" value="__all__" ${allSelected ? "checked" : ""}>
+        <span>全选</span>
+      </label>
+    ` + data.filters.countries.map((country) => `
+      <label class="country-option">
+        <input type="checkbox" name="countryFilter" value="${escapeHtml(country)}" ${state.countries.includes(country) ? "checked" : ""}>
+        <span>${escapeHtml(country)}</span>
+      </label>
+    `).join("");
+  }
+
   function setupData() {
     $("#updatedDate").textContent = data.meta.updated;
     $("#metricCases").textContent = number.format(data.stats.cases);
@@ -75,7 +93,7 @@
     $("#metricOffers").textContent = number.format(data.stats.offers);
 
     elements.major.insertAdjacentHTML("beforeend", optionMarkup(data.filters.majors));
-    elements.country.insertAdjacentHTML("beforeend", optionMarkup(data.filters.countries));
+    renderCountryOptions();
     elements.year.insertAdjacentHTML("beforeend", optionMarkup(data.filters.years));
     elements.track.insertAdjacentHTML("beforeend", optionMarkup(data.filters.tracks));
     elements.result.insertAdjacentHTML("beforeend", optionMarkup(data.filters.results));
@@ -101,7 +119,7 @@
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
       if (state.major && caseItem.major !== state.major) return false;
-      if (state.country && application.country !== state.country) return false;
+      if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
       if (state.result && application.result !== state.result) return false;
@@ -169,7 +187,7 @@
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
     if (state.major) entries.push(["major", state.major]);
-    if (state.country) entries.push(["country", state.country]);
+    if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
     if (state.result) entries.push(["result", state.result]);
@@ -237,8 +255,6 @@
           ${detailScore("雅思", caseItem.scores.ielts)}
           ${detailScore("托福", caseItem.scores.toefl)}
           ${detailScore("GRE", caseItem.scores.gre)}
-          ${detailScore("GMAT", caseItem.scores.gmat)}
-          ${detailScore("学位等级", caseItem.scores.degreeClass)}
         </div>
       </section>
       <section class="detail-section">
@@ -274,7 +290,6 @@
 
   function updateStateFromControls() {
     state.major = elements.major.value;
-    state.country = elements.country.value;
     state.year = elements.year.value;
     state.track = elements.track.value;
     state.result = elements.result.value;
@@ -286,10 +301,10 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", major: "", country: "", year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", major: "", countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
     elements.search.value = "";
     elements.major.value = "";
-    elements.country.value = "";
+    renderCountryOptions();
     elements.year.value = "";
     elements.track.value = "";
     elements.result.value = "";
@@ -310,7 +325,20 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
-  [elements.major, elements.country, elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
+  [elements.major, elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
+  elements.country.addEventListener("change", (event) => {
+    const input = event.target.closest("input");
+    if (!input) return;
+    if (input.value === "__all__") state.countries = input.checked ? [...data.filters.countries] : [];
+    else state.countries = [...elements.country.querySelectorAll('input[name="countryFilter"]:checked')].map((item) => item.value);
+    state.visible = 24;
+    renderCountryOptions();
+    render();
+  });
+  document.addEventListener("click", (event) => {
+    const dropdown = $("#countryDropdown");
+    if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
+  });
   elements.score.addEventListener("input", () => { elements.scoreOutput.textContent = elements.score.value === "50" ? "不限" : elements.score.value; });
   elements.score.addEventListener("change", updateStateFromControls);
   $("#resetFilters").addEventListener("click", resetFilters);
@@ -328,6 +356,7 @@
     if (key === "query") elements.search.value = "";
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
+    else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
     state.visible = 24;
     render();
