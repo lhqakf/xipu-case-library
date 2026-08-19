@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#b51f36">
+  <title>西浦录取案例库</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="app-header">
+    <div class="header-inner">
+      <a class="brand" href="#" aria-label="西浦录取案例库首页">
+        <span class="brand-mark">XJTLU</span>
+        <span class="brand-name">西浦录取案例库</span>
+      </a>
+      <div class="header-actions">
+        <span class="data-date">更新于 <span id="updatedDate">--</span></span>
+        <button class="icon-button saved-button" id="savedButton" type="button" title="查看收藏" aria-label="查看收藏">
+          <span aria-hidden="true">♡</span><span id="savedCount">0</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="overview-band">
+      <div class="overview-inner">
+        <div class="overview-title">
+          <p class="eyebrow">XJTLU ADMISSION CASES</p>
+          <h1>西浦录取案例库</h1>
+          <p class="overview-meta">一行一案例 · 硕士申请结果</p>
+        </div>
+        <div class="metric-grid" aria-label="案例库统计">
+          <div class="metric"><strong id="metricCases">--</strong><span>案例记录</span></div>
+          <div class="metric"><strong id="metricUniversities">--</strong><span>录取院校</span></div>
+          <div class="metric"><strong id="metricPrograms">--</strong><span>申请项目</span></div>
+          <div class="metric"><strong id="metricOffers">--</strong><span>录取结果</span></div>
+        </div>
+        <div class="country-overview">
+          <div class="section-label"><span>热门目的地</span><span>申请记录</span></div>
+          <div id="countryBars" class="country-bars"></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="workspace">
+      <div class="search-row">
+        <label class="search-box">
+          <span class="search-symbol" aria-hidden="true"></span>
+          <input id="searchInput" type="search" placeholder="搜索院校、项目或本科专业" autocomplete="off">
+          <button id="clearSearch" class="clear-search" type="button" title="清空搜索" aria-label="清空搜索">×</button>
+        </label>
+        <button id="mobileFilterButton" class="filter-trigger" type="button">筛选 <span id="activeFilterCount">0</span></button>
+      </div>
+
+      <div class="content-layout">
+        <aside class="filters" id="filtersPanel" aria-label="案例筛选">
+          <div class="filter-heading">
+            <h2>筛选</h2>
+            <button id="resetFilters" type="button">重置</button>
+          </div>
+          <label class="field-label" for="majorFilter">本科专业</label>
+          <select id="majorFilter"><option value="">全部专业</option></select>
+
+          <label class="field-label" for="countryFilter">申请国家或地区</label>
+          <select id="countryFilter"><option value="">全部国家或地区</option></select>
+
+          <div class="filter-pair">
+            <div>
+              <label class="field-label" for="yearFilter">申请季</label>
+              <select id="yearFilter"><option value="">全部</option></select>
+            </div>
+            <div>
+              <label class="field-label" for="trackFilter">培养模式</label>
+              <select id="trackFilter"><option value="">全部</option></select>
+            </div>
+          </div>
+
+          <label class="field-label" for="resultFilter">申请结果</label>
+          <select id="resultFilter"><option value="">全部结果</option></select>
+
+          <label class="field-label" for="scoreFilter">三年均分不低于</label>
+          <div class="score-control">
+            <input id="scoreFilter" type="range" min="50" max="85" value="50" step="1">
+            <output id="scoreOutput" for="scoreFilter">不限</output>
+          </div>
+
+          <label class="toggle-row">
+            <input id="hasScoreFilter" type="checkbox">
+            <span>仅看有完整三年成绩</span>
+          </label>
+          <button id="applyMobileFilters" class="primary-button" type="button">查看结果</button>
+        </aside>
+
+        <section class="results-section" aria-live="polite">
+          <div class="results-toolbar">
+            <div>
+              <h2 id="resultTitle">全部案例</h2>
+              <p><span id="resultCount">0</span> 个案例</p>
+            </div>
+            <label class="sort-select">
+              <span>排序</span>
+              <select id="sortFilter">
+                <option value="recent">申请季最新</option>
+                <option value="score">三年均分</option>
+                <option value="rank">院校排名</option>
+              </select>
+            </label>
+          </div>
+          <div id="activeChips" class="active-chips"></div>
+          <div id="caseGrid" class="case-grid"></div>
+          <div id="emptyState" class="empty-state" hidden>
+            <div class="empty-symbol">0</div>
+            <h3>没有匹配的案例</h3>
+            <button id="emptyReset" type="button">清除筛选</button>
+          </div>
+          <button id="loadMore" class="load-more" type="button">加载更多</button>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <div class="filter-backdrop" id="filterBackdrop"></div>
+  <div class="drawer-backdrop" id="drawerBackdrop"></div>
+  <aside class="detail-drawer" id="detailDrawer" aria-hidden="true" aria-label="案例详情">
+    <div class="drawer-header">
+      <div><span class="drawer-kicker">匿名申请案例</span><h2 id="drawerTitle">案例详情</h2></div>
+      <button id="closeDrawer" class="close-button" type="button" title="关闭" aria-label="关闭">×</button>
+    </div>
+    <div id="drawerContent" class="drawer-content"></div>
+  </aside>
+
+  <nav class="mobile-nav" aria-label="主导航">
+    <button class="mobile-nav-item active" id="homeNav" type="button"><span>⌂</span>案例</button>
+    <button class="mobile-nav-item" id="savedNav" type="button"><span>♡</span>收藏</button>
+  </nav>
+
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
