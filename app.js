@@ -359,6 +359,7 @@
   $("#majorSearch").addEventListener("input", () => {
     clearTimeout(majorSearchTimer);
     const search = $("#majorSearch").value.trim();
+    if (search) setMajorDropdown(true);
     renderMajorOptions(search);
     if (!search) return;
     majorSearchTimer = setTimeout(() => {
