@@ -194,8 +194,8 @@
           <div class="profile-line">${escapeHtml(app.program)}</div>
           <div class="score-strip">
             <div class="score-item"><span>三年均分</span><strong>${scoreValue(caseItem.scores.average)}</strong></div>
+            <div class="score-item"><span>大三</span><strong>${scoreValue(caseItem.scores.y3)}</strong></div>
             <div class="score-item"><span>雅思</span><strong>${scoreValue(caseItem.scores.ielts)}</strong></div>
-            <div class="score-item"><span>GRE</span><strong>${scoreValue(caseItem.scores.gre)}</strong></div>
           </div>
           <div class="offer-summary">
             <span class="offer-mark"></span>
