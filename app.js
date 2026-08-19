@@ -33,6 +33,7 @@
     matchY1: $("#matchY1"),
     matchY2: $("#matchY2"),
     matchY3: $("#matchY3"),
+    matchAverage: $("#matchAverage"),
     matchButton: $("#matchScores"),
     major: $("#majorFilter"),
     country: $("#countryFilter"),
@@ -360,6 +361,7 @@
     elements.scoreOutput.textContent = "不限";
     elements.completeScores.checked = false;
     [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); });
+    updateMatchAverage();
     render();
   }
 
@@ -374,6 +376,13 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
+  function updateMatchAverage() {
+    const values = [elements.matchY1, elements.matchY2, elements.matchY3].map((input) => Number.parseFloat(input.value));
+    const complete = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
+    elements.matchAverage.value = complete ? String(Math.round((values[0] + values[1] + values[2]) / 3)) : "均分";
+    elements.matchAverage.classList.toggle("has-value", complete);
+  }
+  [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => input.addEventListener("input", updateMatchAverage));
   elements.matchButton.addEventListener("click", () => {
     const inputs = [elements.matchY1, elements.matchY2, elements.matchY3];
     const values = inputs.map((input) => Number.parseFloat(input.value));
@@ -445,7 +454,7 @@
     if (key === "query") elements.search.value = "";
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
-    else if (key === "scoreMatch") { state.scoreMatch = false; state.matchScores = { y1: null, y2: null, y3: null }; [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); }); }
+    else if (key === "scoreMatch") { state.scoreMatch = false; state.matchScores = { y1: null, y2: null, y3: null }; [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); }); updateMatchAverage(); }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
     else if (key.startsWith("major:")) { state.majors = state.majors.filter((major) => major !== key.slice(6)); renderMajorOptions(); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }

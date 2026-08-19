@@ -92,8 +92,10 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .search-symbol { position: absolute; left: 18px; top: 15px; width: 15px; height: 15px; border: 2px solid #6e797e; border-radius: 50%; }
 .search-symbol::after { content: ""; position: absolute; width: 7px; height: 2px; background: #6e797e; transform: rotate(45deg); right: -5px; bottom: -3px; }
 .clear-search { position: absolute; right: 8px; top: 7px; width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
-.score-match-box { display: grid; grid-template-columns: repeat(3, 64px) 88px; gap: 6px; }
+.score-match-box { display: grid; grid-template-columns: repeat(4, 64px) 88px; gap: 6px; }
 .score-match-box input { width: 64px; height: 48px; padding: 0 7px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white; }
+.score-match-box output { display: grid; place-items: center; width: 64px; height: 48px; border: 1px solid #cbd2d4; border-radius: 4px; color: #8a9499; background: #f7f8f8; }
+.score-match-box output.has-value { color: var(--red-dark); font-weight: 800; background: white; }
 .score-match-box input.invalid { border-color: var(--red); box-shadow: 0 0 0 1px var(--red); }
 .score-match-box button { height: 48px; padding: 0 10px; border: 0; border-radius: 4px; color: white; background: var(--red); font-weight: 700; }
 .filter-trigger { display: none; border: 1px solid var(--ink); background: white; border-radius: 4px; padding: 0 14px; font-weight: 700; }
@@ -244,8 +246,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
   .search-row { margin-bottom: 14px; }
   .search-row { flex-wrap: wrap; }
   .search-box { min-width: calc(100% - 84px); }
-  .score-match-box { order: 3; grid-template-columns: repeat(3, minmax(0, 1fr)) 88px; width: 100%; }
+  .score-match-box { order: 3; grid-template-columns: repeat(4, minmax(0, 1fr)) 88px; width: 100%; }
   .score-match-box input { width: 100%; height: 44px; }
+  .score-match-box output { width: 100%; height: 44px; }
   .score-match-box button { height: 44px; }
   .search-box input { height: 44px; font-size: 13px; }
   .search-symbol { top: 13px; }
