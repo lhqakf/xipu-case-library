@@ -208,6 +208,8 @@
   function cardMarkup(caseItem) {
     const app = caseItem.application;
     const isSaved = saved.has(caseItem.id);
+    const primaryScoreLabel = caseItem.scores.average ? "三年均分" : (caseItem.scores.gpa ? "GPA" : "三年均分");
+    const primaryScoreValue = caseItem.scores.average || caseItem.scores.gpa;
     return `
       <article class="case-card" data-id="${escapeHtml(caseItem.id)}">
         <button class="save-card ${isSaved ? "is-saved" : ""}" type="button" data-action="save" title="${isSaved ? "取消收藏" : "收藏案例"}" aria-label="${isSaved ? "取消收藏" : "收藏案例"}">${isSaved ? "♥" : "♡"}</button>
@@ -216,7 +218,7 @@
           <h3>${escapeHtml(app.university)}</h3>
           <div class="profile-line">${escapeHtml(app.program)}</div>
           <div class="score-strip">
-            <div class="score-item"><span>三年均分</span><strong>${scoreValue(caseItem.scores.average)}</strong></div>
+            <div class="score-item"><span>${primaryScoreLabel}</span><strong>${scoreValue(primaryScoreValue)}</strong></div>
             <div class="score-item"><span>大一</span><strong>${scoreValue(caseItem.scores.y1)}</strong></div>
             <div class="score-item"><span>大二</span><strong>${scoreValue(caseItem.scores.y2)}</strong></div>
             <div class="score-item"><span>大三</span><strong>${scoreValue(caseItem.scores.y3)}</strong></div>
