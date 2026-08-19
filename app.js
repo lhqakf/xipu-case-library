@@ -379,7 +379,7 @@
   function updateMatchAverage() {
     const values = [elements.matchY1, elements.matchY2, elements.matchY3].map((input) => Number.parseFloat(input.value));
     const complete = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
-    elements.matchAverage.value = complete ? String(Math.round((values[0] + values[1] + values[2]) / 3)) : "均分";
+    elements.matchAverage.textContent = complete ? `均分 ${Math.round((values[0] + values[1] + values[2]) / 3)}` : "均分 --";
     elements.matchAverage.classList.toggle("has-value", complete);
   }
   [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => input.addEventListener("input", updateMatchAverage));
