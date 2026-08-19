@@ -14,6 +14,7 @@
   const state = {
     query: "",
     majors: [...data.filters.majors],
+    majorQuery: "",
     countries: [...data.filters.countries],
     year: "",
     track: "",
@@ -73,9 +74,9 @@
   function renderMajorOptions(search = $("#majorSearch").value) {
     const keyword = search.trim().toLocaleLowerCase("zh-CN");
     const allSelected = state.majors.length === data.filters.majors.length;
-    const summary = $("#majorSummary");
-    summary.textContent = allSelected ? "全部专业" : state.majors.length ? `已选 ${state.majors.length} 个专业` : "未选择专业";
-    summary.title = allSelected ? "全部专业" : state.majors.join("、");
+    const searchInput = $("#majorSearch");
+    searchInput.placeholder = allSelected ? "全部专业" : state.majors.length ? `已选 ${state.majors.length} 个专业` : "未选择专业";
+    searchInput.title = allSelected ? "全部专业" : state.majors.join("、");
     const visibleMajors = keyword ? sortedMajors.filter((major) => major.toLocaleLowerCase("zh-CN").includes(keyword)) : sortedMajors;
     elements.major.innerHTML = `
       <label class="country-option country-select-all">
@@ -142,6 +143,7 @@
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
       if (state.majors.length !== data.filters.majors.length && !state.majors.includes(caseItem.major)) return false;
+      if (state.majorQuery && !caseItem.major.toLocaleLowerCase("zh-CN").includes(state.majorQuery.toLocaleLowerCase("zh-CN"))) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
@@ -210,6 +212,7 @@
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
     if (state.majors.length !== data.filters.majors.length) entries.push(["majors", `本科专业：${state.majors.length ? `已选 ${state.majors.length} 个` : "未选择"}`]);
+    if (state.majorQuery) entries.push(["majorQuery", `专业搜索：${state.majorQuery}`]);
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
@@ -323,7 +326,7 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", majors: [...data.filters.majors], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [...data.filters.majors], majorQuery: "", countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
@@ -349,7 +352,10 @@
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
   $("#majorSearch").addEventListener("input", () => {
+    state.majorQuery = $("#majorSearch").value.trim();
+    state.visible = 24;
     renderMajorOptions($("#majorSearch").value);
+    render();
   });
   elements.major.addEventListener("change", (event) => {
     const input = event.target.closest("input");
@@ -361,6 +367,12 @@
     renderMajorOptions();
     render();
   });
+  function setMajorDropdown(open) {
+    $("#majorDropdownPanel").hidden = !open;
+    $("#majorDropdownToggle").classList.toggle("open", open);
+    $("#majorDropdownToggle").setAttribute("aria-expanded", String(open));
+  }
+  $("#majorDropdownToggle").addEventListener("click", () => setMajorDropdown($("#majorDropdownPanel").hidden));
   [elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
   elements.country.addEventListener("change", (event) => {
     const input = event.target.closest("input");
@@ -372,9 +384,9 @@
     render();
   });
   document.addEventListener("click", (event) => {
-    [$("#countryDropdown"), $("#majorDropdown")].forEach((dropdown) => {
-      if (dropdown.open && !dropdown.contains(event.target)) dropdown.open = false;
-    });
+    const countryDropdown = $("#countryDropdown");
+    if (countryDropdown.open && !countryDropdown.contains(event.target)) countryDropdown.open = false;
+    if (!$("#majorDropdown").contains(event.target)) setMajorDropdown(false);
   });
   elements.score.addEventListener("input", () => { elements.scoreOutput.textContent = elements.score.value === "50" ? "不限" : elements.score.value; });
   elements.score.addEventListener("change", updateStateFromControls);
@@ -395,6 +407,7 @@
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
     else if (key === "majors") { state.majors = [...data.filters.majors]; $("#majorSearch").value = ""; renderMajorOptions(""); }
+    else if (key === "majorQuery") { state.majorQuery = ""; $("#majorSearch").value = ""; renderMajorOptions(""); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
     state.visible = 24;
     render();
@@ -405,7 +418,7 @@
   });
   $("#closeDrawer").addEventListener("click", closeDrawer);
   elements.drawerBackdrop.addEventListener("click", closeDrawer);
-  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeDrawer(); closeMobileFilters(); $("#countryDropdown").open = false; $("#majorDropdown").open = false; } });
+  document.addEventListener("keydown", (event) => { if (event.key === "Escape") { closeDrawer(); closeMobileFilters(); $("#countryDropdown").open = false; setMajorDropdown(false); } });
   $("#mobileFilterButton").addEventListener("click", () => { elements.filters.classList.add("open"); elements.filterBackdrop.classList.add("open"); });
   elements.filterBackdrop.addEventListener("click", closeMobileFilters);
   $("#applyMobileFilters").addEventListener("click", closeMobileFilters);

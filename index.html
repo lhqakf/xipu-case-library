@@ -61,13 +61,15 @@
             <button id="resetFilters" type="button">重置</button>
           </div>
           <span class="field-label" id="majorFilterLabel">本科专业</span>
-          <details class="country-dropdown" id="majorDropdown">
-            <summary id="majorSummary">全部专业</summary>
-            <div class="country-dropdown-panel major-dropdown-panel">
-              <input id="majorSearch" class="major-input" type="text" placeholder="输入专业名称查找" autocomplete="off">
+          <div class="major-combobox" id="majorDropdown">
+            <div class="major-combobox-control">
+              <input id="majorSearch" type="text" placeholder="全部专业" autocomplete="off" aria-label="输入本科专业名称">
+              <button id="majorDropdownToggle" type="button" aria-label="展开专业列表" aria-expanded="false"></button>
+            </div>
+            <div class="country-dropdown-panel major-dropdown-panel" id="majorDropdownPanel" hidden>
               <div id="majorFilter" class="country-options major-options" role="group" aria-labelledby="majorFilterLabel"></div>
             </div>
-          </details>
+          </div>
 
           <span class="field-label" id="countryFilterLabel">申请国家或地区</span>
           <details class="country-dropdown" id="countryDropdown">
