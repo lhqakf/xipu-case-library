@@ -24,6 +24,8 @@
     matchScores: { y1: null, y2: null, y3: null },
     sort: "recent",
     savedOnly: false,
+    aiReturnAvailable: false,
+    aiCaseIds: [],
     visible: 24,
   };
 
@@ -48,6 +50,7 @@
     count: $("#resultCount"),
     title: $("#resultTitle"),
     backFromSaved: $("#backFromSaved"),
+    backToAiResults: $("#backToAiResults"),
     chips: $("#activeChips"),
     empty: $("#emptyState"),
     loadMore: $("#loadMore"),
@@ -61,6 +64,17 @@
     drawerBackdrop: $("#drawerBackdrop"),
     drawerTitle: $("#drawerTitle"),
     drawerContent: $("#drawerContent"),
+    caseModeButton: $("#caseModeButton"),
+    aiModeButton: $("#aiModeButton"),
+    caseOverview: $("#caseOverview"),
+    caseWorkspace: $("#caseWorkspace"),
+    aiSchoolView: $("#aiSchoolView"),
+    aiProfileInput: $("#aiProfileInput"),
+    aiAnalyzeButton: $("#aiAnalyzeButton"),
+    aiAnalysis: $("#aiAnalysis"),
+    aiProfileSummary: $("#aiProfileSummary"),
+    aiSummaryText: $("#aiSummaryText"),
+    aiTierGrid: $("#aiTierGrid"),
   };
 
   function escapeHtml(value) {
@@ -147,7 +161,9 @@
 
   function getFilteredCases() {
     const query = state.query.trim().toLocaleLowerCase("zh-CN");
+    const aiCaseIds = new Set(state.aiCaseIds);
     const filtered = data.cases.filter((caseItem) => {
+      if (aiCaseIds.size) return aiCaseIds.has(caseItem.id);
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
       if (state.majors.length && !state.majors.includes(caseItem.major)) return false;
@@ -206,6 +222,150 @@
     return "";
   }
 
+  const aiTargetGroups = [
+    { label: "数据相关", triggers: ["数据", "大数据", "分析", "统计"], keywords: ["data", "analytics", "statistic", "business intelligence", "数据", "统计", "分析"] },
+    { label: "计算机", triggers: ["计算机", "软件", "人工智能", "ai"], keywords: ["computer", "computing", "software", "artificial intelligence", "machine learning", "计算机", "软件", "人工智能"] },
+    { label: "金融", triggers: ["金融", "fintech"], keywords: ["finance", "financial", "fintech", "risk management", "金融"] },
+    { label: "商科管理", triggers: ["商科", "管理", "市场"], keywords: ["management", "marketing", "business", "commerce", "管理", "市场"] },
+    { label: "传媒", triggers: ["传媒", "传播", "媒体"], keywords: ["media", "communication", "journalism", "传媒", "传播"] },
+    { label: "工程", triggers: ["工程", "电子", "电气"], keywords: ["engineering", "electronic", "electrical", "工程", "电子", "电气"] },
+  ];
+
+  function parseAiProfile(text) {
+    const normalized = text.trim();
+    const averageMatch = normalized.match(/(?:均分|平均分|成绩)\s*(?:为|是|有|大约|约)?\s*(\d{2}(?:\.\d+)?)/i);
+    const qsMatch = normalized.match(/QS\s*(?:排名)?\s*(?:前|Top)?\s*(\d{1,3})/i);
+    const country = [...data.filters.countries].sort((a, b) => b.length - a.length).find((value) => normalized.includes(value)) || "";
+    const major = [...data.filters.majors]
+      .filter((value) => value && value.length >= 2 && !["未注明", "专业未注明"].includes(value))
+      .sort((a, b) => b.length - a.length)
+      .find((value) => normalized.toLocaleLowerCase("zh-CN").includes(value.toLocaleLowerCase("zh-CN"))) || "";
+    const target = aiTargetGroups.find((group) => group.triggers.some((word) => normalized.toLocaleLowerCase("zh-CN").includes(word.toLocaleLowerCase("zh-CN"))));
+    return {
+      text: normalized,
+      average: averageMatch ? Number(averageMatch[1]) : null,
+      qs: qsMatch ? Number(qsMatch[1]) : null,
+      country,
+      major,
+      targetLabel: target?.label || "",
+      targetKeywords: target?.keywords || [],
+    };
+  }
+
+  function aiMajorRoot(major) {
+    return ["数学", "计算机", "数据", "电子", "电气", "金融", "经济", "会计", "传媒", "传播", "管理", "建筑", "生物", "化学", "英语"]
+      .find((root) => major.includes(root)) || major;
+  }
+
+  function getAiCandidates(profile) {
+    let cases = data.cases.filter((item) => {
+      const app = item.application;
+      if (!app?.university || !app?.program || app.degree === "博士") return false;
+      if (!String(app.result).includes("Offer") && app.result !== "有条件录取") return false;
+      if (profile.country && app.country !== profile.country) return false;
+      const rank = numeric(app.rank, null);
+      if (profile.qs && (rank === null || rank > profile.qs)) return false;
+      if (profile.targetKeywords.length && !profile.targetKeywords.some((word) => `${app.program} ${item.major}`.toLocaleLowerCase("zh-CN").includes(word.toLocaleLowerCase("zh-CN")))) return false;
+      return numeric(item.scores.average, null) !== null;
+    });
+
+    if (profile.major) {
+      const root = aiMajorRoot(profile.major);
+      const similarMajorCases = cases.filter((item) => item.major === profile.major || (root.length >= 2 && item.major.includes(root)));
+      if (similarMajorCases.length >= 9) cases = similarMajorCases;
+    }
+
+    const grouped = new Map();
+    cases.forEach((item) => {
+      const key = `${item.application.university}|${item.application.program}`;
+      const current = grouped.get(key) || { item, scores: [], caseIds: [], count: 0 };
+      current.scores.push(numeric(item.scores.average, 0));
+      current.caseIds.push(item.id);
+      current.count += 1;
+      grouped.set(key, current);
+    });
+
+    return [...grouped.values()].map((entry) => {
+      const historicalAverage = entry.scores.reduce((sum, value) => sum + value, 0) / entry.scores.length;
+      const rank = numeric(entry.item.application.rank, null);
+      const rankBonus = rank !== null && rank <= 10 ? 4 : rank !== null && rank <= 25 ? 2.5 : rank !== null && rank <= 50 ? 1.5 : rank !== null && rank <= 100 ? .5 : 0;
+      const applicantAverage = profile.average ?? 70;
+      return { ...entry, historicalAverage, rank, delta: historicalAverage + rankBonus - applicantAverage };
+    });
+  }
+
+  function chooseAiTiers(candidates) {
+    const used = new Set();
+    const pick = (predicate, anchor) => {
+      const preferred = candidates.filter((candidate) => !used.has(candidate.item.id) && predicate(candidate));
+      const pool = preferred.length >= 6 ? preferred : candidates.filter((candidate) => !used.has(candidate.item.id));
+      const chosen = pool.sort((a, b) => Math.abs(a.delta - anchor) - Math.abs(b.delta - anchor) || (a.rank ?? 9999) - (b.rank ?? 9999)).slice(0, 6);
+      chosen.forEach((candidate) => used.add(candidate.item.id));
+      return chosen;
+    };
+    return {
+      challenge: pick((candidate) => candidate.delta > 1.5, 3.5),
+      match: pick((candidate) => candidate.delta >= -2 && candidate.delta <= 2, 0),
+      safe: pick((candidate) => candidate.delta < -1.5, -4),
+    };
+  }
+
+  function aiRecommendationMarkup(candidate) {
+    const app = candidate.item.application;
+    return `<article class="ai-recommendation">
+      <h4>${escapeHtml(app.university)}</h4>
+      <p>${escapeHtml(app.program)}</p>
+      <div class="ai-recommendation-meta">
+        ${candidate.rank !== null ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
+        <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
+        <span>${candidate.count} 条相似记录</span>
+      </div>
+      <button type="button" data-ai-ids="${escapeHtml(candidate.caseIds.join(","))}">查看 ${candidate.count} 条相似案例 →</button>
+    </article>`;
+  }
+
+  function renderAiAnalysis() {
+    const profile = parseAiProfile(elements.aiProfileInput.value);
+    if (!profile.text) { elements.aiProfileInput.focus(); return; }
+    const candidates = getAiCandidates(profile);
+    const tiers = chooseAiTiers(candidates);
+    const tags = [
+      profile.major ? `本科：${profile.major}` : "本科专业：未识别",
+      profile.average !== null ? `均分：${profile.average}` : "均分：未识别（暂按70匹配）",
+      profile.country ? `地区：${profile.country}` : "地区：不限",
+      profile.qs ? `目标：QS前${profile.qs}` : "QS：不限",
+      profile.targetLabel ? `方向：${profile.targetLabel}` : "方向：不限",
+    ];
+    elements.aiProfileSummary.innerHTML = tags.map((tag) => `<span class="ai-profile-tag">${escapeHtml(tag)}</span>`).join("");
+    elements.aiSummaryText.textContent = candidates.length
+      ? `已从 ${number.format(data.stats.cases)} 条案例中筛出 ${number.format(candidates.length)} 个相关项目，并按照历史录取分数与院校排名生成三档建议。`
+      : "暂未找到同时满足全部条件的案例，建议放宽QS范围或目标专业关键词后重新分析。";
+    const tierConfig = [
+      ["challenge", "冲刺", "历史案例要求相对更高"],
+      ["match", "匹配", "与当前背景较为接近"],
+      ["safe", "保底", "历史案例分数相对友好"],
+    ];
+    elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
+      <div class="ai-tier-head"><strong>${title}</strong><span>${note}</span></div>
+      ${tiers[key].length ? tiers[key].map(aiRecommendationMarkup).join("") : '<div class="ai-tier-empty">暂无符合条件的项目</div>'}
+    </section>`).join("");
+    elements.aiAnalysis.hidden = false;
+    elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  function setAppMode(mode) {
+    const aiMode = mode === "ai";
+    elements.caseOverview.hidden = aiMode;
+    elements.caseWorkspace.hidden = aiMode;
+    elements.aiSchoolView.hidden = !aiMode;
+    elements.caseModeButton.classList.toggle("active", !aiMode);
+    elements.aiModeButton.classList.toggle("active", aiMode);
+    if (aiMode) {
+      elements.homeNav.classList.remove("active");
+      elements.savedNav.classList.remove("active");
+    }
+  }
+
   function cardMarkup(caseItem) {
     const app = caseItem.application;
     const isSaved = saved.has(caseItem.id);
@@ -235,6 +395,7 @@
   }
 
   function activeFilterEntries() {
+    if (state.aiCaseIds.length) return [["aiCases", `AI相似案例：${state.aiCaseIds.length}条`]];
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
     if (state.majors.length) state.majors.slice().sort(pinyinCollator.compare).forEach((major) => entries.push([`major:${major}`, major]));
@@ -252,8 +413,9 @@
     const cases = getFilteredCases();
     const shown = cases.slice(0, state.visible);
     elements.count.textContent = number.format(cases.length);
-    elements.title.textContent = state.savedOnly ? "我的收藏" : "案例结果";
+    elements.title.textContent = state.savedOnly ? "我的收藏" : (state.aiCaseIds.length ? "AI相似案例" : "案例结果");
     elements.backFromSaved.hidden = !state.savedOnly;
+    elements.backToAiResults.hidden = !state.aiReturnAvailable || state.savedOnly;
     elements.grid.innerHTML = shown.map(cardMarkup).join("");
     elements.empty.hidden = cases.length > 0;
     elements.loadMore.hidden = cases.length <= state.visible;
@@ -353,7 +515,7 @@
   }
 
   function resetFilters() {
-    Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, scoreMatch: false, matchScores: { y1: null, y2: null, y3: null }, savedOnly: false, visible: 24 });
+    Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, scoreMatch: false, matchScores: { y1: null, y2: null, y3: null }, savedOnly: false, aiCaseIds: [], visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
@@ -456,6 +618,7 @@
     if (!chip) return;
     const key = chip.dataset.key;
     if (key === "query") elements.search.value = "";
+    if (key === "aiCases") { state.aiCaseIds = []; state.aiReturnAvailable = false; }
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
     else if (key === "scoreMatch") { state.scoreMatch = false; state.matchScores = { y1: null, y2: null, y3: null }; [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); }); updateMatchAverage(); }
@@ -475,12 +638,36 @@
   $("#mobileFilterButton").addEventListener("click", () => { elements.filters.classList.add("open"); elements.filterBackdrop.classList.add("open"); });
   elements.filterBackdrop.addEventListener("click", closeMobileFilters);
   $("#applyMobileFilters").addEventListener("click", closeMobileFilters);
-  function showSaved() { state.savedOnly = true; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
-  function showAllCases() { state.savedOnly = false; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function showSaved() { setAppMode("cases"); state.aiCaseIds = []; state.savedOnly = true; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function showAllCases() { setAppMode("cases"); state.aiCaseIds = []; state.savedOnly = false; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   elements.savedButton.addEventListener("click", showSaved);
   elements.savedNav.addEventListener("click", showSaved);
   elements.backFromSaved.addEventListener("click", showAllCases);
+  elements.backToAiResults.addEventListener("click", () => {
+    state.aiReturnAvailable = false;
+    state.aiCaseIds = [];
+    setAppMode("ai");
+    elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
   elements.homeNav.addEventListener("click", showAllCases);
+  elements.caseModeButton.addEventListener("click", showAllCases);
+  elements.aiModeButton.addEventListener("click", () => { setAppMode("ai"); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  elements.aiAnalyzeButton.addEventListener("click", renderAiAnalysis);
+  $("#aiEditProfile").addEventListener("click", () => { elements.aiProfileInput.focus(); elements.aiProfileInput.scrollIntoView({ behavior: "smooth", block: "center" }); });
+  elements.aiProfileInput.addEventListener("keydown", (event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") renderAiAnalysis(); });
+  elements.aiTierGrid.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-ai-ids]");
+    if (!button) return;
+    state.query = "";
+    state.aiCaseIds = button.dataset.aiIds.split(",").filter(Boolean);
+    state.savedOnly = false;
+    state.aiReturnAvailable = true;
+    state.visible = 24;
+    elements.search.value = "";
+    setAppMode("cases");
+    render();
+    elements.caseWorkspace.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
 
   setupData();
   render();

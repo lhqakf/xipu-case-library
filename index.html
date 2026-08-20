@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#b51f36">
   <title>西浦录取案例库</title>
-  <link rel="stylesheet" href="styles.css?v=20260820-19">
+  <link rel="stylesheet" href="styles.css?v=20260820-21">
 </head>
 <body>
   <header class="app-header">
@@ -23,8 +23,13 @@
     </div>
   </header>
 
+  <nav class="mode-switch" aria-label="功能切换">
+    <button id="caseModeButton" class="mode-button active" type="button"><span aria-hidden="true">🔍</span>案例筛选</button>
+    <button id="aiModeButton" class="mode-button" type="button"><span aria-hidden="true">✨</span>AI智能选校</button>
+  </nav>
+
   <main>
-    <section class="overview-band">
+    <section class="overview-band" id="caseOverview">
       <div class="overview-inner">
         <div class="overview-title">
           <p class="eyebrow">XJTLU ADMISSION CASES</p>
@@ -44,7 +49,7 @@
       </div>
     </section>
 
-    <section class="workspace">
+    <section class="workspace" id="caseWorkspace">
       <div class="search-row">
         <label class="search-box">
           <span class="search-symbol" aria-hidden="true"></span>
@@ -119,6 +124,7 @@
             <div>
               <div class="results-title-row">
                 <button id="backFromSaved" class="back-from-saved" type="button" hidden>← 返回全部案例</button>
+                <button id="backToAiResults" class="back-from-saved" type="button" hidden>← 返回智能选校结果</button>
                 <h2 id="resultTitle">全部案例</h2>
               </div>
               <p><span id="resultCount">0</span> 个案例</p>
@@ -143,6 +149,39 @@
         </section>
       </div>
     </section>
+
+    <section class="ai-school-view" id="aiSchoolView" hidden>
+      <div class="ai-school-shell">
+        <header class="ai-school-header">
+          <span class="ai-kicker">✨ AI智能选校</span>
+          <h2>告诉我你的背景和申请目标</h2>
+          <p>用一句话描述即可，我会从现有西浦录取案例中寻找相近背景。</p>
+        </header>
+
+        <div class="ai-prompt-card">
+          <label for="aiProfileInput">你的背景</label>
+          <textarea id="aiProfileInput" rows="4" placeholder="例如：我是西浦应用数学，均分76，想申请英国QS前50的数据相关专业。">我是西浦应用数学，均分76，想申请英国QS前50的数据相关专业。</textarea>
+          <div class="ai-prompt-actions">
+            <span>可填写：本科专业、均分、国家、QS范围、目标方向</span>
+            <button id="aiAnalyzeButton" type="button">开始分析</button>
+          </div>
+        </div>
+
+        <div class="ai-analysis" id="aiAnalysis" hidden>
+          <div class="ai-analysis-heading">
+            <div>
+              <span class="ai-kicker">分析结果</span>
+              <h3>基于案例库的选校建议</h3>
+            </div>
+            <button id="aiEditProfile" type="button">修改背景</button>
+          </div>
+          <div class="ai-profile-summary" id="aiProfileSummary"></div>
+          <p class="ai-summary-text" id="aiSummaryText"></p>
+          <div class="ai-tier-grid" id="aiTierGrid"></div>
+          <p class="ai-disclaimer">当前为智能匹配雏形，结果来自历史案例，仅供选校初筛参考，不代表正式录取概率。</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <div class="filter-backdrop" id="filterBackdrop"></div>
@@ -161,6 +200,6 @@
   </nav>
 
   <script src="data.js?v=20260819-18"></script>
-  <script src="app.js?v=20260820-19"></script>
+  <script src="app.js?v=20260820-24"></script>
 </body>
 </html>
