@@ -83,7 +83,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .country-count { color: #b8c3c6; text-align: right; font-variant-numeric: tabular-nums; }
 
 .workspace { padding: 28px 0 70px; }
-.search-row { display: flex; gap: 10px; margin-bottom: 22px; }
+.search-row { display: flex; align-items: flex-end; gap: 10px; margin-bottom: 22px; }
 .search-box { position: relative; display: flex; flex: 1; max-width: 760px; }
 .search-box input {
   width: 100%; height: 48px; padding: 0 44px 0 46px; border: 1px solid #cbd2d4; border-radius: 4px; background: white; color: var(--ink);
@@ -92,7 +92,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .search-symbol { position: absolute; left: 18px; top: 15px; width: 15px; height: 15px; border: 2px solid #6e797e; border-radius: 50%; }
 .search-symbol::after { content: ""; position: absolute; width: 7px; height: 2px; background: #6e797e; transform: rotate(45deg); right: -5px; bottom: -3px; }
 .clear-search { position: absolute; right: 8px; top: 7px; width: 34px; height: 34px; border: 0; background: transparent; color: var(--muted); font-size: 22px; }
-.score-match-box { display: grid; grid-template-columns: repeat(3, 64px) 88px 76px; gap: 6px; }
+.score-match-box { display: grid; grid-template-columns: repeat(3, 64px) 88px 76px; column-gap: 6px; row-gap: 5px; }
+.score-match-label { grid-column: 1 / -1; color: var(--muted); font-size: 12px; line-height: 1; }
 .score-match-box input { width: 64px; height: 48px; padding: 0 7px; border: 1px solid #cbd2d4; border-radius: 4px; color: var(--ink); background: white; }
 .score-match-box input[type="number"] { appearance: textfield; -moz-appearance: textfield; }
 .score-match-box input[type="number"]::-webkit-inner-spin-button,
