@@ -15,8 +15,13 @@
   const saved = new Set(JSON.parse(localStorage.getItem("xipu-saved-cases") || "[]"));
   const state = {
     query: "",
+<<<<<<< Updated upstream
     majors: [],
     countries: [...data.filters.countries],
+=======
+    major: "",
+    country: [],
+>>>>>>> Stashed changes
     year: "",
     track: "",
     result: "",
@@ -41,6 +46,9 @@
     matchButton: $("#matchScores"),
     major: $("#majorFilter"),
     country: $("#countryFilter"),
+    countryLabel: $("#countryFilterLabel"),
+    countryMenu: $("#countryFilterMenu"),
+    countryWrap: $("#countryFilterWrap"),
     year: $("#yearFilter"),
     track: $("#trackFilter"),
     result: $("#resultFilter"),
@@ -92,6 +100,7 @@
     return values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
   }
 
+<<<<<<< Updated upstream
   const sortedMajors = [...data.filters.majors].sort(pinyinCollator.compare);
 
   function renderMajorOptions(search = $("#majorSearch").value) {
@@ -131,6 +140,19 @@
         <span>${escapeHtml(country)}</span>
       </label>
     `).join("");
+=======
+  function countryOptionMarkup(values) {
+    return values.map((value) => "<label class=\"multi-option\" role=\"option\"><input type=\"checkbox\" value=\"" + escapeHtml(value) + "\"><span>" + escapeHtml(value) + "</span></label>").join("");
+  }
+
+  function updateCountryControl() {
+    const selected = state.country;
+    elements.countryLabel.textContent = selected.length ? "已选 " + selected.length + " 个国家或地区" : "全部国家或地区";
+    elements.countryMenu.querySelectorAll("input[type=checkbox]").forEach((checkbox) => {
+      checkbox.checked = selected.includes(checkbox.value);
+      checkbox.closest(".multi-option").setAttribute("aria-selected", checkbox.checked ? "true" : "false");
+    });
+>>>>>>> Stashed changes
   }
 
   function setupData() {
@@ -140,8 +162,13 @@
     $("#metricPrograms").textContent = number.format(data.stats.programs);
     $("#metricOffers").textContent = number.format(data.stats.offers);
 
+<<<<<<< Updated upstream
     renderMajorOptions();
     renderCountryOptions();
+=======
+    elements.major.insertAdjacentHTML("beforeend", optionMarkup(data.filters.majors));
+    elements.countryMenu.innerHTML = countryOptionMarkup(data.filters.countries);
+>>>>>>> Stashed changes
     elements.year.insertAdjacentHTML("beforeend", optionMarkup(data.filters.years));
     elements.track.insertAdjacentHTML("beforeend", optionMarkup(data.filters.tracks));
     elements.result.insertAdjacentHTML("beforeend", optionMarkup(data.filters.results));
@@ -168,8 +195,13 @@
       if (aiCaseIds.size) return aiCaseIds.has(caseItem.id);
       const application = caseItem.application;
       if (state.savedOnly && !saved.has(caseItem.id)) return false;
+<<<<<<< Updated upstream
       if (state.majors.length && !state.majors.includes(caseItem.major)) return false;
       if (state.countries.length !== data.filters.countries.length && !state.countries.includes(application.country)) return false;
+=======
+      if (state.major && caseItem.major !== state.major) return false;
+      if (state.country.length && !state.country.includes(application.country)) return false;
+>>>>>>> Stashed changes
       if (state.year && caseItem.year !== state.year) return false;
       if (state.track && caseItem.track !== state.track) return false;
       if (state.result && application.result !== state.result) return false;
@@ -410,8 +442,13 @@
     if (state.aiCaseIds.length) return [["aiCases", `AI相似案例：${state.aiCaseIds.length}条`]];
     const entries = [];
     if (state.query) entries.push(["query", `搜索：${state.query}`]);
+<<<<<<< Updated upstream
     if (state.majors.length) state.majors.slice().sort(pinyinCollator.compare).forEach((major) => entries.push([`major:${major}`, major]));
     if (state.countries.length !== data.filters.countries.length) entries.push(["countries", `国家/地区：${state.countries.length ? state.countries.join("、") : "未选择"}`]);
+=======
+    if (state.major) entries.push(["major", state.major]);
+    state.country.forEach((country) => entries.push(["country", "国家：" + country, country]));
+>>>>>>> Stashed changes
     if (state.year) entries.push(["year", state.year]);
     if (state.track) entries.push(["track", state.track]);
     if (state.result) entries.push(["result", state.result]);
@@ -432,7 +469,11 @@
     elements.empty.hidden = cases.length > 0;
     elements.loadMore.hidden = cases.length <= state.visible;
     elements.grid.hidden = cases.length === 0;
+<<<<<<< Updated upstream
     elements.chips.innerHTML = activeFilterEntries().map(([key, label]) => `<button class="chip" type="button" data-key="${escapeHtml(key)}">${escapeHtml(label)} <b>×</b></button>`).join("");
+=======
+    elements.chips.innerHTML = activeFilterEntries().map(([key, label, value]) => `<button class="chip" type="button" data-key="${key}"${value ? ` data-value="${escapeHtml(value)}"` : ""}>${escapeHtml(label)} <b>×</b></button>`).join("");
+>>>>>>> Stashed changes
     $("#activeFilterCount").textContent = activeFilterEntries().length;
     elements.savedCount.textContent = saved.size;
     elements.savedNav.classList.toggle("active", state.savedOnly);
@@ -516,6 +557,11 @@
   }
 
   function updateStateFromControls() {
+<<<<<<< Updated upstream
+=======
+    state.major = elements.major.value;
+    state.country = [...elements.countryMenu.querySelectorAll("input[type=checkbox]:checked")].map((checkbox) => checkbox.value);
+>>>>>>> Stashed changes
     state.year = elements.year.value;
     state.track = elements.track.value;
     state.result = elements.result.value;
@@ -527,11 +573,18 @@
   }
 
   function resetFilters() {
+<<<<<<< Updated upstream
     Object.assign(state, { query: "", majors: [], countries: [...data.filters.countries], year: "", track: "", result: "", minScore: 50, completeScores: false, scoreMatch: false, matchScores: { y1: null, y2: null, y3: null }, savedOnly: false, aiCaseIds: [], visible: 24 });
     elements.search.value = "";
     $("#majorSearch").value = "";
     renderMajorOptions("");
     renderCountryOptions();
+=======
+    Object.assign(state, { query: "", major: "", country: [], year: "", track: "", result: "", minScore: 50, completeScores: false, savedOnly: false, visible: 24 });
+    elements.search.value = "";
+    elements.major.value = "";
+    updateCountryControl();
+>>>>>>> Stashed changes
     elements.year.value = "";
     elements.track.value = "";
     elements.result.value = "";
@@ -554,6 +607,7 @@
     searchTimer = setTimeout(() => { state.query = elements.search.value.trim(); state.visible = 24; render(); }, 100);
   });
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
+<<<<<<< Updated upstream
   function updateMatchAverage() {
     const values = [elements.matchY1, elements.matchY2, elements.matchY3].map((input) => Number.parseFloat(input.value));
     const complete = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
@@ -614,6 +668,20 @@
     const countryDropdown = $("#countryDropdown");
     if (countryDropdown.open && !countryDropdown.contains(event.target)) countryDropdown.open = false;
     if (!$("#majorDropdown").contains(event.target)) setMajorDropdown(false);
+=======
+  [elements.major, elements.year, elements.track, elements.result, elements.completeScores, elements.sort].forEach((control) => control.addEventListener("change", updateStateFromControls));
+  elements.countryMenu.addEventListener("change", updateStateFromControls);
+  elements.country.addEventListener("click", () => {
+    const isOpen = !elements.countryMenu.hidden;
+    elements.countryMenu.hidden = isOpen;
+    elements.country.setAttribute("aria-expanded", String(!isOpen));
+  });
+  document.addEventListener("click", (event) => {
+    if (!elements.countryWrap.contains(event.target)) {
+      elements.countryMenu.hidden = true;
+      elements.country.setAttribute("aria-expanded", "false");
+    }
+>>>>>>> Stashed changes
   });
   elements.score.addEventListener("input", () => { elements.scoreOutput.textContent = elements.score.value === "50" ? "不限" : elements.score.value; });
   elements.score.addEventListener("change", updateStateFromControls);
@@ -633,10 +701,17 @@
     if (key === "aiCases") { state.aiCaseIds = []; state.aiReturnAvailable = false; }
     if (key === "minScore") { elements.score.value = "50"; elements.scoreOutput.textContent = "不限"; state.minScore = 50; }
     else if (key === "completeScores") { elements.completeScores.checked = false; state.completeScores = false; }
+<<<<<<< Updated upstream
     else if (key === "scoreMatch") { state.scoreMatch = false; state.matchScores = { y1: null, y2: null, y3: null }; [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => { input.value = ""; input.classList.remove("invalid"); }); updateMatchAverage(); }
     else if (key === "countries") { state.countries = [...data.filters.countries]; renderCountryOptions(); }
     else if (key.startsWith("major:")) { state.majors = state.majors.filter((major) => major !== key.slice(6)); renderMajorOptions(); }
     else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
+=======
+    else if (key === "country") {
+      state.country = state.country.filter((country) => country !== chip.dataset.value);
+      updateCountryControl();
+    } else { state[key] = ""; if (elements[key]) elements[key].value = ""; }
+>>>>>>> Stashed changes
     state.visible = 24;
     render();
   });
@@ -682,5 +757,6 @@
   });
 
   setupData();
+  updateCountryControl();
   render();
 })();
