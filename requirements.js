@@ -41,8 +41,7 @@ window.XIPU_PROGRAM_REQUIREMENTS = {
   "帝国理工学院|Medical Robotics and Image-Guided Intervention: Clinical Robotics and AI": { ielts: "6.5（单项6.0）", level: "Standard", gre: "官网未说明", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/clinical-robotics-ai/", verified: "2026-08-20" },
   "帝国理工学院|MSc Advanced Chemical Engineering": { ielts: "6.5（单项6.0）", level: "Standard", gre: "官网未说明", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/advanced-chemical-engineering/", verified: "2026-08-20" },
   "帝国理工学院|MRes Artificial Intelligence and Machine Learning": { ielts: "6.5（单项6.0）", level: "Standard", gre: "官网未说明", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/artificial-intelligence-machine-learning/", verified: "2026-08-20" },
-  "帝国理工学院|MSc Statistics": { ielts: "7.0（单项6.5）", level: "Higher", gre: "不要求GRE/GMAT", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/statistics/", verified: "2026-08-20" },
-  "帝国理工学院|MRes Machine Learning and Big Data in the Physical Sciences": { ielts: "7.0（单项6.5）", level: "Higher", gre: "官网未说明", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/machine-learning-physical-sciences/", verified: "2026-08-20" }
+  "帝国理工学院|MSc Statistics": { ielts: "7.0（单项6.5）", level: "Higher", gre: "不要求GRE/GMAT", source: "https://www.imperial.ac.uk/study/courses/postgraduate-taught/statistics/", verified: "2026-08-20" }
 };
 
 window.XIPU_PROGRAM_REQUIREMENT_ALIASES = {
@@ -86,6 +85,5 @@ window.XIPU_PROGRAM_REQUIREMENT_ALIASES = {
   "帝国理工学院|模拟与数字集成电路设计": "帝国理工学院|MSc Analogue and Digital Integrated Circuit Design",
   "帝国理工学院|Environmental data science and machine learning": "帝国理工学院|MSc Environmental Data Science and Machine Learning",
   "帝国理工学院|soft electronic materials": "帝国理工学院|MRes Soft Electronic Materials",
-  "帝国理工学院|transport": "帝国理工学院|MSc Transport",
-  "帝国理工学院|MRes in Machine Learning and Big Data in the Physical Sciences": "帝国理工学院|MRes Machine Learning and Big Data in the Physical Sciences"
+  "帝国理工学院|transport": "帝国理工学院|MSc Transport"
 };
