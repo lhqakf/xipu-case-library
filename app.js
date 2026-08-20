@@ -47,6 +47,7 @@
     grid: $("#caseGrid"),
     count: $("#resultCount"),
     title: $("#resultTitle"),
+    backFromSaved: $("#backFromSaved"),
     chips: $("#activeChips"),
     empty: $("#emptyState"),
     loadMore: $("#loadMore"),
@@ -252,6 +253,7 @@
     const shown = cases.slice(0, state.visible);
     elements.count.textContent = number.format(cases.length);
     elements.title.textContent = state.savedOnly ? "我的收藏" : "案例结果";
+    elements.backFromSaved.hidden = !state.savedOnly;
     elements.grid.innerHTML = shown.map(cardMarkup).join("");
     elements.empty.hidden = cases.length > 0;
     elements.loadMore.hidden = cases.length <= state.visible;
@@ -474,9 +476,11 @@
   elements.filterBackdrop.addEventListener("click", closeMobileFilters);
   $("#applyMobileFilters").addEventListener("click", closeMobileFilters);
   function showSaved() { state.savedOnly = true; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
+  function showAllCases() { state.savedOnly = false; state.visible = 24; render(); window.scrollTo({ top: 0, behavior: "smooth" }); }
   elements.savedButton.addEventListener("click", showSaved);
   elements.savedNav.addEventListener("click", showSaved);
-  elements.homeNav.addEventListener("click", () => { state.savedOnly = false; render(); window.scrollTo({ top: 0, behavior: "smooth" }); });
+  elements.backFromSaved.addEventListener("click", showAllCases);
+  elements.homeNav.addEventListener("click", showAllCases);
 
   setupData();
   render();
