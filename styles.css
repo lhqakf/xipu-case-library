@@ -64,7 +64,7 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 .saved-button { display: flex; gap: 5px; align-items: center; justify-content: center; }
 .saved-button span:first-child { font-size: 20px; line-height: 1; }
 
-.mode-switch { display: flex; width: min(1180px, calc(100% - 40px)); margin: 16px auto; padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: white; }
+.mode-switch { display: flex; width: fit-content; max-width: calc(100% - 40px); margin: 16px max(20px, calc((100% - 1180px) / 2)); padding: 5px; border: 1px solid var(--line); border-radius: 8px; background: white; }
 .mode-button { min-height: 40px; padding: 0 18px; border: 0; border-radius: 5px; color: var(--muted); background: transparent; font-weight: 700; }
 .mode-button span { margin-right: 5px; }
 .mode-button.active { color: white; background: var(--red); }
@@ -293,8 +293,8 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
   .metric strong { font-size: 18px; }
   .metric span { margin-top: 5px; font-size: 9px; }
   .workspace { padding-top: 16px; }
-  .mode-switch { width: calc(100% - 24px); margin: 10px auto; }
-  .mode-button { flex: 1; padding: 0 8px; font-size: 13px; }
+  .mode-switch { width: fit-content; max-width: calc(100% - 24px); margin: 10px 12px; }
+  .mode-button { padding: 0 10px; font-size: 13px; }
   .search-row { margin-bottom: 14px; }
   .search-row { flex-wrap: wrap; }
   .search-box { min-width: calc(100% - 84px); }
