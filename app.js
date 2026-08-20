@@ -2,6 +2,8 @@
   "use strict";
 
   const data = window.XIPU_CASE_DATA;
+  const programRequirements = window.XIPU_PROGRAM_REQUIREMENTS || {};
+  const programRequirementAliases = window.XIPU_PROGRAM_REQUIREMENT_ALIASES || {};
   if (!data) {
     document.body.innerHTML = '<main class="empty-state"><h3>案例数据加载失败</h3></main>';
     return;
@@ -312,6 +314,15 @@
 
   function aiRecommendationMarkup(candidate) {
     const app = candidate.item.application;
+    const requirementKey = `${app.university}|${app.program}`;
+    const requirement = programRequirements[programRequirementAliases[requirementKey] || requirementKey];
+    const requirementMarkup = requirement
+      ? `<div class="ai-program-requirements">
+          <span><b>雅思</b> ${escapeHtml(requirement.ielts)}</span>
+          <span><b>GRE</b> ${escapeHtml(requirement.gre)}</span>
+          <a href="${escapeHtml(requirement.source)}" target="_blank" rel="noopener">官网要求 ↗</a>
+        </div>`
+      : `<div class="ai-program-requirements pending"><span>语言与GRE要求：待核实</span></div>`;
     return `<article class="ai-recommendation">
       <h4>${escapeHtml(app.university)}</h4>
       <p>${escapeHtml(app.program)}</p>
@@ -320,6 +331,7 @@
         <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
         <span>${candidate.count} 条相似记录</span>
       </div>
+      ${requirementMarkup}
       <button type="button" data-ai-ids="${escapeHtml(candidate.caseIds.join(","))}">查看 ${candidate.count} 条相似案例 →</button>
     </article>`;
   }
