@@ -1,0 +1,13 @@
+{
+  "name": "xipu-case-library-ai-backend",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/server.mjs",
+    "dev": "node --watch server/server.mjs"
+  },
+  "dependencies": {
+    "openai": "^5.0.0"
+  }
+}

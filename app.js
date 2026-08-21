@@ -336,7 +336,7 @@
     </article>`;
   }
 
-  function renderAiAnalysis() {
+  function renderLocalAiAnalysis() {
     const profile = parseAiProfile(elements.aiProfileInput.value);
     if (!profile.text) { elements.aiProfileInput.focus(); return; }
     const candidates = getAiCandidates(profile);
@@ -365,6 +365,67 @@
     elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const AI_API_URL = window.XIPU_AI_API_URL || "http://localhost:8787/api/ai-recommend";
+
+  function backendRecommendationMarkup(candidate) {
+    return `<article class="ai-recommendation">
+      <h4>${escapeHtml(candidate.university)}</h4>
+      <p>${escapeHtml(candidate.program)}</p>
+      <div class="ai-recommendation-meta">
+        ${candidate.rank !== null ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
+        <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
+        <span>${candidate.count} 条相似记录</span>
+      </div>
+      <p class="ai-recommendation-reason">${escapeHtml(candidate.reason || "基于历史案例匹配。")}</p>
+      <button type="button" data-ai-ids="${escapeHtml(candidate.caseIds.join(","))}">查看 ${candidate.count} 条相似案例 →</button>
+    </article>`;
+  }
+
+  function renderBackendAiAnalysis(result) {
+    const profile = result.profile || {};
+    const tags = [
+      profile.major ? `本科：${profile.major}` : "本科专业：未识别",
+      profile.average !== null && profile.average !== undefined ? `均分：${profile.average}` : "均分：未识别",
+      profile.country ? `地区：${profile.country}` : "地区：不限",
+      profile.qsRanking ? `目标：QS前${profile.qsRanking}` : "QS：不限",
+      profile.targetProgram ? `目标专业：${profile.targetProgram}` : "目标专业：未识别",
+      profile.careerGoal ? `职业：${profile.careerGoal}` : "职业目标：未识别",
+    ];
+    elements.aiProfileSummary.innerHTML = tags.map((tag) => `<span class="ai-profile-tag">${escapeHtml(tag)}</span>`).join("");
+    elements.aiSummaryText.textContent = result.summary || `已从 ${number.format(data.stats.cases)} 条真实案例中生成选校建议。`;
+    const tierConfig = [["challenge", "冲刺", "历史案例要求相对更高"], ["match", "匹配", "与当前背景较为接近"], ["safe", "保底", "历史案例分数相对友好"]];
+    const tiers = result.tiers || {};
+    elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
+      <div class="ai-tier-head"><strong>${title}</strong><span>${note}</span></div>
+      ${tiers[key] && tiers[key].length ? tiers[key].map(backendRecommendationMarkup).join("") : '<div class="ai-tier-empty">暂无符合条件的项目</div>'}
+    </section>`).join("");
+    elements.aiAnalysis.hidden = false;
+    elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+
+  async function renderAiAnalysis() {
+    const message = elements.aiProfileInput.value.trim();
+    if (!message) { elements.aiProfileInput.focus(); return; }
+    elements.aiAnalyzeButton.disabled = true;
+    const originalLabel = elements.aiAnalyzeButton.textContent;
+    elements.aiAnalyzeButton.textContent = "分析中…";
+    try {
+      const response = await fetch(AI_API_URL, {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ message }),
+      });
+      if (!response.ok) throw new Error(`backend_${response.status}`);
+      renderBackendAiAnalysis(await response.json());
+    } catch (error) {
+      console.error("AI backend unavailable", error);
+      renderLocalAiAnalysis();
+      elements.aiSummaryText.textContent += " 当前为本地匹配结果，智能解释服务暂时不可用。";
+    } finally {
+      elements.aiAnalyzeButton.disabled = false;
+      elements.aiAnalyzeButton.textContent = originalLabel;
+    }
+  }
   function setAppMode(mode) {
     const aiMode = mode === "ai";
     elements.caseOverview.hidden = aiMode;
