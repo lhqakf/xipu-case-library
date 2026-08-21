@@ -242,6 +242,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .ai-prompt-card { padding: 24px; }
 .ai-prompt-card label { display: block; margin-bottom: 10px; font-weight: 800; }
 .ai-prompt-card textarea { width: 100%; min-height: 118px; padding: 16px; resize: vertical; border: 1px solid #cbd2d4; border-radius: 6px; color: var(--ink); background: #fafbfa; font-size: 16px; line-height: 1.75; }
+.ai-prompt-card textarea::placeholder { color: #8a9499; opacity: 1; }
 .ai-prompt-actions { display: flex; justify-content: space-between; align-items: center; gap: 18px; margin-top: 14px; }
 .ai-prompt-actions span { color: var(--muted); font-size: 12px; }
 .ai-prompt-actions button { min-width: 112px; height: 42px; border: 0; border-radius: 5px; color: white; background: var(--red); font-weight: 800; }
