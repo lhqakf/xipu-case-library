@@ -366,7 +366,8 @@
     elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  const AI_API_URL = window.XIPU_AI_API_URL || "http://localhost:8787/api/ai-recommend";
+  const AI_API_URL = window.XIPU_AI_API_URL || "";
+  const AI_MODE = window.XIPU_AI_MODE || (AI_API_URL ? "llm" : "local");
 
   function backendRecommendationMarkup(candidate) {
     return `<article class="ai-recommendation">
@@ -415,11 +416,21 @@
     elements.aiAnalyzeButton.disabled = true;
     const originalLabel = elements.aiAnalyzeButton.textContent;
     elements.aiAnalyzeButton.textContent = "分析中…";
+    elements.aiSummaryText.classList.remove("ai-error-message");
+    if (AI_MODE === "local" || !AI_API_URL) {
+      if (elements.aiModeStatus) {
+        elements.aiModeStatus.textContent = "🟠 本地规则模式";
+        elements.aiModeStatus.className = "ai-mode-status local";
+      }
+      renderLocalAiAnalysis();
+      elements.aiAnalyzeButton.disabled = false;
+      elements.aiAnalyzeButton.textContent = originalLabel;
+      return;
+    }
     if (elements.aiModeStatus) {
       elements.aiModeStatus.textContent = "正在连接大模型…";
       elements.aiModeStatus.className = "ai-mode-status pending";
     }
-    elements.aiSummaryText.classList.remove("ai-error-message");
     try {
       const response = await fetch(AI_API_URL, {
         method: "POST",
@@ -428,14 +439,14 @@
       });
       const payload = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const message = [payload.error, payload.detail].filter(Boolean).join("：") || `HTTP ${response.status}`;
-        throw new Error(message);
+        const errorMessage = [payload.error, payload.detail].filter(Boolean).join("：") || `HTTP ${response.status}`;
+        throw new Error(errorMessage);
       }
       renderBackendAiAnalysis(payload);
     } catch (error) {
       console.error("AI backend unavailable", error);
       let detail = error && error.message ? error.message : String(error);
-      if (detail === "Failed to fetch" || detail === "fetch failed") detail = `无法连接后端 ${AI_API_URL}，请确认 localhost:8787 已启动并配置公司 One API。`;
+      if (detail === "Failed to fetch" || detail === "fetch failed") detail = `无法连接后端 ${AI_API_URL}，请检查后端服务和公网地址。`;
       if (elements.aiModeStatus) {
         elements.aiModeStatus.textContent = "🔴 大模型调用失败";
         elements.aiModeStatus.className = "ai-mode-status error";

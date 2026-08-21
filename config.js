@@ -1,2 +1,4 @@
 // Public frontend configuration only. Never put OPENAI_API_KEY here.
-window.XIPU_AI_API_URL = "http://localhost:8787/api/ai-recommend";
+// Empty URL keeps the public site in local rule mode.
+window.XIPU_AI_API_URL = "";
+window.XIPU_AI_MODE = "local";
