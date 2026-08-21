@@ -22,7 +22,7 @@ try {
   if (error.code !== "ENOENT") throw error;
 }
 
-const port = Number(process.env.PORT || 8787);
+const port = Number(process.env.PORT || 4173);
 const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
 const oneApiBaseURL = process.env.OPENAI_BASE_URL || "";
 const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY);
@@ -255,6 +255,40 @@ async function recommend(message) {
   };
 }
 
+const staticMimeTypes = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".svg": "image/svg+xml",
+  ".ico": "image/x-icon",
+};
+
+async function serveStatic(request, response) {
+  const pathname = decodeURIComponent(new URL(request.url, "http://localhost").pathname);
+  const relativePath = pathname === "/" ? "index.html" : pathname.replace(/^\/+/, "");
+  const filePath = path.resolve(projectRoot, relativePath);
+  const allowedRoot = projectRoot + path.sep;
+  if (filePath !== projectRoot && !filePath.startsWith(allowedRoot)) {
+    response.writeHead(403);
+    response.end("Forbidden");
+    return;
+  }
+  try {
+    const body = await fs.readFile(filePath);
+    response.writeHead(200, {
+      "content-type": staticMimeTypes[path.extname(filePath).toLowerCase()] || "application/octet-stream",
+      "cache-control": "no-store",
+    });
+    response.end(request.method === "HEAD" ? undefined : body);
+  } catch (error) {
+    response.writeHead(error.code === "ENOENT" ? 404 : 500, { "content-type": "text/plain; charset=utf-8" });
+    response.end(error.code === "ENOENT" ? "Not found" : "Unable to read file");
+  }
+}
+
 const server = http.createServer(async (request, response) => {
   const origin = requestOrigin(request);
   if (request.method === "OPTIONS") {
@@ -283,6 +317,10 @@ const server = http.createServer(async (request, response) => {
     }, origin);
     return;
   }
+  if (request.method === "GET" || request.method === "HEAD") {
+    await serveStatic(request, response);
+    return;
+  }
   if (request.method !== "POST" || request.url !== "/api/ai-recommend") {
     jsonResponse(response, 404, { error: "Not found" }, origin);
     return;
@@ -309,5 +347,5 @@ const server = http.createServer(async (request, response) => {
 });
 
 server.listen(port, () => {
-  console.log("XIPU AI backend listening on http://localhost:" + port);
+  console.log("XIPU local AI site listening on http://localhost:" + port);
 });
