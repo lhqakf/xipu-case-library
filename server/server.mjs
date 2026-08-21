@@ -1,17 +1,42 @@
 import http from "node:http";
-import OpenAI from "openai";
 import { loadCaseData } from "./data-loader.mjs";
 import { chooseAiTiers, getAiCandidates, normalizeProfile, serializeCandidate } from "./matcher.mjs";
 
 const port = Number(process.env.PORT || 8787);
-const model = process.env.OPENAI_MODEL || "gpt-5-mini";
+const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
+const oneApiBaseURL = process.env.OPENAI_BASE_URL || "";
+const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY);
 const maxBodyBytes = 16 * 1024;
-const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:5500,http://localhost:8787")
+const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:4173,http://localhost:5500,http://localhost:8787")
   .split(",")
   .map((value) => value.trim())
   .filter(Boolean);
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const apiKey = process.env.OPENAI_API_KEY || "";
 const caseData = await loadCaseData();
+let lastOneApiSuccessAt = null;
+let lastOneApiResponseId = null;
+
+async function createModelResponse(request) {
+  if (!apiKey) throw new Error("OPENAI_API_KEY 未配置");
+  if (!oneApiBaseURL) throw new Error("OPENAI_BASE_URL 未配置，无法确认正在调用公司 One API");
+  if (!model) throw new Error("OPENAI_MODEL 未配置");
+  const endpoint = oneApiBaseURL.replace(/\/+$/, "") + "/responses";
+  const result = await fetch(endpoint, {
+    method: "POST",
+    headers: { "content-type": "application/json", "x-api-key": apiKey },
+    body: JSON.stringify(request),
+  });
+  const body = await result.text();
+  let response;
+  try { response = body ? JSON.parse(body) : {}; } catch { response = {}; }
+  if (!result.ok) {
+    const detail = response.error?.message || body.slice(0, 500) || `HTTP ${result.status}`;
+    throw new Error(`One API HTTP ${result.status}: ${detail}`);
+  }
+  lastOneApiSuccessAt = new Date().toISOString();
+  lastOneApiResponseId = response.id || null;
+  return response;
+}
 
 const extractionSchema = {
   type: "object",
@@ -86,7 +111,7 @@ function outputText(response) {
 }
 
 async function extractProfile(message) {
-  const response = await openai.responses.create({
+  const response = await createModelResponse({
     model,
     input: [
       {
@@ -105,7 +130,7 @@ async function extractProfile(message) {
 }
 
 async function generateAdvice(profile, candidates) {
-  const response = await openai.responses.create({
+  const response = await createModelResponse({
     model,
     input: [
       {
@@ -186,6 +211,9 @@ async function recommend(message) {
     candidatesCount: candidates.length,
     summary: advice.summary || "已根据历史案例生成建议。",
     tiers,
+    mode: "llm",
+    model,
+    providerBaseURL: oneApiBaseURL || "https://api.openai.com/v1",
   };
 }
 
@@ -203,7 +231,18 @@ const server = http.createServer(async (request, response) => {
     return;
   }
   if (request.method === "GET" && request.url === "/health") {
-    jsonResponse(response, 200, { ok: true }, origin);
+    jsonResponse(response, 200, {
+      ok: true,
+      service: "xipu-ai-backend",
+      model,
+      openaiKeyConfigured: apiKeyConfigured,
+      oneApiConfigured: Boolean(oneApiBaseURL),
+      oneApiCallVerified: Boolean(lastOneApiSuccessAt),
+      lastOneApiSuccessAt,
+      lastOneApiResponseId,
+      providerBaseURL: oneApiBaseURL || null,
+      note: lastOneApiSuccessAt ? "公司 One API 已返回成功的 Responses API 响应" : "尚未验证成功调用公司 One API",
+    }, origin);
     return;
   }
   if (request.method !== "POST" || request.url !== "/api/ai-recommend") {
@@ -226,7 +265,8 @@ const server = http.createServer(async (request, response) => {
   } catch (error) {
     console.error("AI recommendation failed:", error instanceof Error ? error.message : error);
     const status = error && /Request is too large|JSON/.test(String(error.message || error)) ? 400 : 502;
-    jsonResponse(response, status, { error: "AI recommendation is temporarily unavailable" }, origin);
+    const detail = error instanceof Error ? error.message : String(error);
+    jsonResponse(response, status, { error: "OpenAI 请求失败", detail, model, providerBaseURL: oneApiBaseURL || "https://api.openai.com/v1" }, origin);
   }
 });
 

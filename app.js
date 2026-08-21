@@ -74,6 +74,7 @@
     aiProfileInput: $("#aiProfileInput"),
     aiAnalyzeButton: $("#aiAnalyzeButton"),
     aiAnalysis: $("#aiAnalysis"),
+    aiModeStatus: $("#aiModeStatus"),
     aiProfileSummary: $("#aiProfileSummary"),
     aiSummaryText: $("#aiSummaryText"),
     aiTierGrid: $("#aiTierGrid"),
@@ -382,6 +383,11 @@
   }
 
   function renderBackendAiAnalysis(result) {
+    if (elements.aiModeStatus) {
+      elements.aiModeStatus.textContent = `🟢 大模型模式：${result.model || "gpt-5.6-luna"}`;
+      elements.aiModeStatus.className = "ai-mode-status llm";
+    }
+    elements.aiSummaryText.classList.remove("ai-error-message");
     const profile = result.profile || {};
     const tags = [
       profile.major ? `本科：${profile.major}` : "本科专业：未识别",
@@ -409,18 +415,37 @@
     elements.aiAnalyzeButton.disabled = true;
     const originalLabel = elements.aiAnalyzeButton.textContent;
     elements.aiAnalyzeButton.textContent = "分析中…";
+    if (elements.aiModeStatus) {
+      elements.aiModeStatus.textContent = "正在连接大模型…";
+      elements.aiModeStatus.className = "ai-mode-status pending";
+    }
+    elements.aiSummaryText.classList.remove("ai-error-message");
     try {
       const response = await fetch(AI_API_URL, {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ message }),
       });
-      if (!response.ok) throw new Error(`backend_${response.status}`);
-      renderBackendAiAnalysis(await response.json());
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const message = [payload.error, payload.detail].filter(Boolean).join("：") || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+      renderBackendAiAnalysis(payload);
     } catch (error) {
       console.error("AI backend unavailable", error);
-      renderLocalAiAnalysis();
-      elements.aiSummaryText.textContent += " 当前为本地匹配结果，智能解释服务暂时不可用。";
+      let detail = error && error.message ? error.message : String(error);
+      if (detail === "Failed to fetch" || detail === "fetch failed") detail = `无法连接后端 ${AI_API_URL}，请确认 localhost:8787 已启动并配置公司 One API。`;
+      if (elements.aiModeStatus) {
+        elements.aiModeStatus.textContent = "🔴 大模型调用失败";
+        elements.aiModeStatus.className = "ai-mode-status error";
+      }
+      elements.aiAnalysis.hidden = false;
+      elements.aiProfileSummary.innerHTML = "";
+      elements.aiTierGrid.innerHTML = "";
+      elements.aiSummaryText.textContent = `大模型调用失败：${detail}`;
+      elements.aiSummaryText.classList.add("ai-error-message");
+      elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
     } finally {
       elements.aiAnalyzeButton.disabled = false;
       elements.aiAnalyzeButton.textContent = originalLabel;

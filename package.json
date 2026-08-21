@@ -4,10 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "start": "node server/server.mjs",
-    "dev": "node --watch server/server.mjs"
-  },
-  "dependencies": {
-    "openai": "^5.0.0"
+    "start": "node --env-file=.env server/server.mjs",
+    "dev": "node --env-file=.env --watch server/server.mjs"
   }
 }
