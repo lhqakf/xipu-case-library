@@ -385,6 +385,7 @@
 
   function renderBackendAiAnalysis(result) {
     if (elements.aiModeStatus) {
+      elements.aiModeStatus.hidden = false;
       elements.aiModeStatus.textContent = `🟢 大模型模式：${result.model || "gpt-5.6-luna"}`;
       elements.aiModeStatus.className = "ai-mode-status llm";
     }
@@ -418,16 +419,14 @@
     elements.aiAnalyzeButton.textContent = "分析中…";
     elements.aiSummaryText.classList.remove("ai-error-message");
     if (AI_MODE === "local" || !AI_API_URL) {
-      if (elements.aiModeStatus) {
-        elements.aiModeStatus.textContent = "🟠 本地规则模式";
-        elements.aiModeStatus.className = "ai-mode-status local";
-      }
+      if (elements.aiModeStatus) elements.aiModeStatus.hidden = true;
       renderLocalAiAnalysis();
       elements.aiAnalyzeButton.disabled = false;
       elements.aiAnalyzeButton.textContent = originalLabel;
       return;
     }
     if (elements.aiModeStatus) {
+      elements.aiModeStatus.hidden = false;
       elements.aiModeStatus.textContent = "正在连接大模型…";
       elements.aiModeStatus.className = "ai-mode-status pending";
     }
@@ -448,6 +447,7 @@
       let detail = error && error.message ? error.message : String(error);
       if (detail === "Failed to fetch" || detail === "fetch failed") detail = `无法连接后端 ${AI_API_URL}，请检查后端服务和公网地址。`;
       if (elements.aiModeStatus) {
+        elements.aiModeStatus.hidden = false;
         elements.aiModeStatus.textContent = "🔴 大模型调用失败";
         elements.aiModeStatus.className = "ai-mode-status error";
       }
