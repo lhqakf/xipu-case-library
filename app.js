@@ -300,7 +300,7 @@
     const used = new Set();
     const pick = (predicate, anchor) => {
       const preferred = candidates.filter((candidate) => !used.has(candidate.item.id) && predicate(candidate));
-      const pool = preferred.length >= 6 ? preferred : candidates.filter((candidate) => !used.has(candidate.item.id));
+      const pool = preferred;
       const chosen = pool.sort((a, b) => Math.abs(a.delta - anchor) - Math.abs(b.delta - anchor) || (a.rank ?? 9999) - (b.rank ?? 9999)).slice(0, 6);
       chosen.forEach((candidate) => used.add(candidate.item.id));
       return chosen;
