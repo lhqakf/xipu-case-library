@@ -278,7 +278,8 @@
       elements.aiModeStatus.textContent = `🟢 V4 Agent：${result.usedTools?.length ? result.usedTools.join(" + ") : "直接回答"}`;
       elements.aiModeStatus.className = "ai-mode-status llm";
     }
-    elements.aiProfileSummary.innerHTML = '<span class="ai-profile-tag">已将完整自然语言交给 V4 Agent 理解</span>';
+    elements.aiProfileSummary.hidden = true;
+    elements.aiProfileSummary.innerHTML = "";
     elements.aiSummaryText.classList.remove("ai-error-message");
     elements.aiSummaryText.textContent = result.answer || "Agent 已完成分析。";
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
@@ -297,6 +298,7 @@
       return;
     }
     const profile = result.profile || {};
+    elements.aiProfileSummary.hidden = false;
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
       elements.aiModeStatus.textContent = `🟢 大模型模式：${result.model || "gpt-5.6-luna"}`;
