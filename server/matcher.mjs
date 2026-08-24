@@ -45,10 +45,28 @@ export function normalizeProfile(extracted, rawText, data) {
   const filters = data.filters || {};
   const average = numeric(extracted && extracted.average, null);
   const qsRanking = numeric(extracted && extracted.qsRanking, null);
+  const intake = text(extracted && extracted.intake);
   const targetProgram = text(extracted && extracted.targetProgram);
   const careerGoal = text(extracted && extracted.careerGoal);
   const coursePreferences = Array.isArray(extracted && extracted.coursePreferences)
     ? extracted.coursePreferences.map(text).filter(Boolean).slice(0, 8)
+    : [];
+  const softPreferences = Array.isArray(extracted && extracted.softPreferences)
+    ? extracted.softPreferences.filter((item) => item && typeof item === "object").map((item) => ({
+        name: text(item.name),
+        value: text(item.value),
+        evidence: text(item.evidence),
+        confidence: Math.max(0, Math.min(1, numeric(item.confidence, 0))),
+      })).filter((item) => item.name && item.value).slice(0, 12)
+    : [];
+  const avoidTopics = Array.isArray(extracted && extracted.avoidTopics)
+    ? extracted.avoidTopics.map(text).filter(Boolean).slice(0, 8)
+    : [];
+  const missingInformation = Array.isArray(extracted && extracted.missingInformation)
+    ? extracted.missingInformation.map(text).filter(Boolean).slice(0, 8)
+    : [];
+  const clarificationQuestions = Array.isArray(extracted && extracted.clarificationQuestions)
+    ? extracted.clarificationQuestions.map(text).filter(Boolean).slice(0, 3)
     : [];
   const targetText = [targetProgram, careerGoal, coursePreferences.join(" ")].filter(Boolean).join(" ");
   const lowerTargetText = targetText.toLocaleLowerCase("zh-CN");
@@ -59,13 +77,20 @@ export function normalizeProfile(extracted, rawText, data) {
   const country = resolveKnownValue(extracted && extracted.country, filters.countries || []);
   return {
     rawText: text(rawText),
+    intent: text(extracted && extracted.intent) || "recommend_schools",
     major,
     average: average !== null && average >= 0 && average <= 100 ? average : null,
     country,
     qsRanking: qsRanking !== null && qsRanking > 0 ? qsRanking : null,
+    intake,
     targetProgram,
     careerGoal,
     coursePreferences,
+    softPreferences,
+    avoidTopics,
+    missingInformation,
+    clarificationQuestions,
+    needsClarification: Boolean(extracted && extracted.needsClarification) && clarificationQuestions.length > 0,
     targetLabel: targetGroup ? targetGroup.label : "",
     targetKeywords,
   };

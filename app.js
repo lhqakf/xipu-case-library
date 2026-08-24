@@ -372,13 +372,13 @@
   }
 
   function renderBackendAiAnalysis(result) {
+    const profile = result.profile || {};
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
-      elements.aiModeStatus.textContent = `🟢 大模型模式：${result.model || "gpt-5.6-luna"}`;
-      elements.aiModeStatus.className = "ai-mode-status llm";
+      elements.aiModeStatus.textContent = result.needsClarification ? "🟡 需要补充信息" : `🟢 大模型模式：${result.model || "gpt-5.6-luna"}`;
+      elements.aiModeStatus.className = result.needsClarification ? "ai-mode-status pending" : "ai-mode-status llm";
     }
     elements.aiSummaryText.classList.remove("ai-error-message");
-    const profile = result.profile || {};
     const tags = [
       profile.major ? `本科：${profile.major}` : "本科专业：未识别",
       profile.average !== null && profile.average !== undefined ? `均分：${profile.average}` : "均分：未识别",
@@ -386,9 +386,18 @@
       profile.qsRanking ? `目标：QS前${profile.qsRanking}` : "QS：不限",
       profile.targetProgram ? `目标专业：${profile.targetProgram}` : "目标专业：未识别",
       profile.careerGoal ? `职业：${profile.careerGoal}` : "职业目标：未识别",
+      ...(Array.isArray(profile.softPreferences) && profile.softPreferences.length ? [`偏好：${profile.softPreferences.map((item) => `${item.name}=${item.value}`).join("、")}`] : []),
+      ...(Array.isArray(profile.avoidTopics) && profile.avoidTopics.length ? [`排除：${profile.avoidTopics.join("、")}`] : []),
     ];
     elements.aiProfileSummary.innerHTML = tags.map((tag) => `<span class="ai-profile-tag">${escapeHtml(tag)}</span>`).join("");
     elements.aiSummaryText.textContent = result.summary || `已从 ${number.format(data.stats.cases)} 条真实案例中生成选校建议。`;
+    if (result.needsClarification) {
+      const questions = Array.isArray(result.clarificationQuestions) ? result.clarificationQuestions : [];
+      elements.aiTierGrid.innerHTML = `<section class="ai-tier match"><div class="ai-tier-head"><strong>请补充信息</strong><span>补充后重新分析</span></div><div class="ai-tier-empty">${escapeHtml(questions.join("\n"))}</div></section>`;
+      elements.aiAnalysis.hidden = false;
+      elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
+      return;
+    }
     const tierConfig = [["challenge", "冲刺", "历史案例要求相对更高"], ["match", "匹配", "与当前背景较为接近"], ["safe", "保底", "历史案例分数相对友好"]];
     const tiers = result.tiers || {};
     elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
