@@ -238,7 +238,6 @@
         ${candidate.rank !== null ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
         <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
         <span>${candidate.count} 条相似记录</span>
-        ${candidate.fitScore !== null && candidate.fitScore !== undefined ? `<span>AI软匹配 ${Math.round(candidate.fitScore)}</span>` : ""}
       </div>
       <div class="ai-recommendation-insight">
         <p><strong>项目方向</strong>${escapeHtml(candidate.programFocus || "课程背景待核实")}</p>
@@ -262,7 +261,6 @@
         ${candidate.rank !== null && candidate.rank !== undefined ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
         ${candidate.historicalAverage !== null && candidate.historicalAverage !== undefined ? `<span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>` : ""}
         ${candidate.count ? `<span>${escapeHtml(candidate.count)} 条相似记录</span>` : ""}
-        ${candidate.fitScore !== null && candidate.fitScore !== undefined ? `<span>AI软匹配 ${Math.round(candidate.fitScore)}</span>` : ""}
       </div>
       <div class="ai-recommendation-insight">
         <p><strong>Agent分析</strong>${escapeHtml(candidate.fitSummary || "暂未生成个性化分析。")}</p>
