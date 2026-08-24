@@ -282,14 +282,19 @@
       : "";
   }
 
+  function clearLegacyAgentHint() {
+    if (!elements.aiProfileSummary) return;
+    elements.aiProfileSummary.hidden = true;
+    elements.aiProfileSummary.replaceChildren();
+  }
+
   function renderAgentAnalysis(result) {
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
       elements.aiModeStatus.textContent = `🟢 V4 Agent：${result.usedTools?.length ? result.usedTools.join(" + ") : "直接回答"}`;
       elements.aiModeStatus.className = "ai-mode-status llm";
     }
-    elements.aiProfileSummary.hidden = true;
-    elements.aiProfileSummary.innerHTML = "";
+    clearLegacyAgentHint();
     elements.aiSummaryText.classList.remove("ai-error-message");
     elements.aiSummaryText.textContent = result.answer || "Agent 已完成分析。";
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
