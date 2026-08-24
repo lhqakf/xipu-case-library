@@ -432,19 +432,13 @@
       renderBackendAiAnalysis(payload);
     } catch (error) {
       console.error("AI backend unavailable", error);
-      let detail = error && error.message ? error.message : String(error);
-      if (detail === "Failed to fetch" || detail === "fetch failed") detail = `无法连接后端 ${AI_API_URL}，请检查后端服务和公网地址。`;
+      renderLocalAiAnalysis();
       if (elements.aiModeStatus) {
         elements.aiModeStatus.hidden = false;
-        elements.aiModeStatus.textContent = "🔴 大模型调用失败";
-        elements.aiModeStatus.className = "ai-mode-status error";
+        elements.aiModeStatus.textContent = "🟡 已切换到本地匹配模式";
+        elements.aiModeStatus.className = "ai-mode-status local";
       }
-      elements.aiAnalysis.hidden = false;
-      elements.aiProfileSummary.innerHTML = "";
-      elements.aiTierGrid.innerHTML = "";
-      elements.aiSummaryText.textContent = `大模型调用失败：${detail}`;
-      elements.aiSummaryText.classList.add("ai-error-message");
-      elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
+      elements.aiSummaryText.textContent = `当前大模型暂不可用，已根据本地案例库生成匹配建议。${elements.aiSummaryText.textContent ? ` ${elements.aiSummaryText.textContent}` : ""}`;
     } finally {
       elements.aiAnalyzeButton.disabled = false;
       elements.aiAnalyzeButton.textContent = originalLabel;
