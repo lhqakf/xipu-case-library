@@ -34,7 +34,7 @@ const agentResponseSchema = {
 const agentSystemPrompt = `你是西浦案例库 V4 Agent。你可以像普通 ChatGPT 一样理解用户的自然语言，但只有在事实需要外部或本地证据时才使用工具。
 
 工具选择规则：
-1. 用户询问西浦历史录取案例、相似背景、某校以前是否有人拿到 offer 时，调用 search_xipu_cases。
+1. 用户明确提供带数值的均分、平均分、成绩、分数、GPA 或绩点时，默认必须调用 search_xipu_cases。最终回答仍然要正常回答用户的问题，并把西浦真实历史案例作为单独证据补充；案例不能替代 AI 分析。用户询问西浦历史录取案例、相似背景、某校以前是否有人拿到 offer 时，也调用 search_xipu_cases。
 2. 用户询问大学官网、项目课程、申请要求、数学基础、编程量、课程难度或最新项目信息时，调用 web_search。优先大学官方域名，不要把中介、博客或排名网站当作课程事实。
 3. 一个问题同时涉及历史录取可能性和项目课程适配度时，可以连续调用两个工具。必须根据上一轮工具结果决定是否需要下一轮，不要假设固定调用顺序。
 4. 常识解释、概念解释或不需要案例和最新官网事实的问题，可以不调用工具。
@@ -79,6 +79,31 @@ function outputText(response) {
     }
   }
   return chunks.join("\n").trim();
+}
+
+function hasScoreSignal(message) {
+  const text = String(message || "");
+  const scoreLabel = /(?:均分|平均分|成绩|分数|绩点)\s*(?:是|为|在|约|大约|:|：|=)?\s*\d{1,3}(?:\.\d+)?\s*(?:多|左右|上下)?\s*(?:分|\/\s*\d{1,3})?/i;
+  const gpa = /\bGPA\s*(?:是|为|约|大约|:|：|=)?\s*\d(?:\.\d+)?(?:\s*\/\s*\d(?:\.\d+)?)?\b/i;
+  const scoreWithUnit = /(?:^|[^\d.])(\d{2,3}(?:\.\d+)?)\s*(?:多|左右|上下)?\s*分(?!钟)/i;
+  return scoreLabel.test(text) || gpa.test(text) || scoreWithUnit.test(text);
+}
+
+function normalizeParsedAgentPayload(parsed) {
+  if (!parsed || typeof parsed !== "object") return {};
+  let payload = parsed;
+  if (typeof parsed.answer === "string" && /^\s*\{/.test(parsed.answer)) {
+    try {
+      const nested = parseJsonText(parsed.answer);
+      if (nested && typeof nested === "object" && (nested.answer || nested.recommendations)) {
+        payload = { ...parsed, ...nested, answer: nested.answer || parsed.answer };
+        if (!Array.isArray(nested.recommendations) && Array.isArray(parsed.recommendations)) payload.recommendations = parsed.recommendations;
+      }
+    } catch {
+      // Keep the original answer when a provider returns ordinary text beginning with a brace.
+    }
+  }
+  return payload;
 }
 
 function functionCalls(response) {
@@ -166,7 +191,7 @@ function sanitizeRecommendation(item, caseRegistry, sourceRegistry) {
     caseIds: candidate.caseIds,
     sampleCases: candidate.sampleCases,
     officialUrl: candidate.officialUrl,
-    fitScore: Number.isFinite(fitScore) ? Math.max(0, Math.min(100, fitScore)) : 0,
+    fitScore: Number.isFinite(fitScore) ? Math.max(0, Math.min(100, fitScore)) : null,
     fitSummary: boundedText(item.fitSummary, 800) || "暂未生成个性化匹配说明。",
     tradeoffs: boundedList(item.tradeoffs, 5, 240),
     evidenceCaseIds,
@@ -209,6 +234,7 @@ export async function runAgent({
   let response;
   let turn = 0;
   let toolCallCount = 0;
+  let scoreSearchAttempted = false;
 
   while (turn < Math.max(1, Math.min(8, maxTurns))) {
     turn += 1;
@@ -239,14 +265,56 @@ export async function runAgent({
 
     const calls = functionCalls(response);
     if (!calls.length) {
+      if (hasScoreSignal(message) && !usedTools.has("search_xipu_cases") && !scoreSearchAttempted) {
+        scoreSearchAttempted = true;
+        if (toolCallCount >= maxToolCalls) {
+          return fallbackAgentResult("工具调用次数达到上限，请缩小问题范围后重试。", usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
+        }
+        toolCallCount += 1;
+        const forcedCallId = `score_search_${turn}`;
+        const forcedArgs = {
+          query: message,
+          major: null,
+          average: null,
+          country: null,
+          city: null,
+          targetDirection: null,
+          learningInterest: [],
+          qsRanking: null,
+          preferences: [],
+          limit: 8,
+        };
+        let forcedResult;
+        try {
+          forcedResult = await searchTool.execute(forcedArgs);
+          for (const candidate of forcedResult.candidates || []) caseRegistry.set(candidate.candidateKey, candidate);
+          usedTools.add("search_xipu_cases");
+        } catch (error) {
+          forcedResult = { error: boundedText(error?.message || error, 500) };
+        }
+        input.push({ type: "function_call", call_id: forcedCallId, name: "search_xipu_cases", arguments: JSON.stringify(forcedArgs) });
+        input.push({ type: "function_call_output", call_id: forcedCallId, output: JSON.stringify(forcedResult) });
+        input.push({ role: "system", content: [{ type: "input_text", text: "用户明确提供了分数。请在正常回答用户问题的同时，结合刚才的西浦真实案例结果补充案例证据；不要只返回案例，也不要把案例当作录取保证。" }] });
+        continue;
+      }
       const rawAnswer = outputText(response);
       if (!rawAnswer) return fallbackAgentResult("模型没有返回可显示的回答。", usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
       let parsed;
-      try { parsed = parseJsonText(rawAnswer); }
+      try { parsed = normalizeParsedAgentPayload(parseJsonText(rawAnswer)); }
       catch { return fallbackAgentResult(rawAnswer, usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch); }
-      const recommendations = Array.isArray(parsed.recommendations)
+      let recommendations = Array.isArray(parsed.recommendations)
         ? parsed.recommendations.map((item) => sanitizeRecommendation(item, caseRegistry, sourceRegistry)).filter(Boolean).slice(0, MAX_RECOMMENDATIONS)
         : [];
+      if (!recommendations.length && hasScoreSignal(message) && caseRegistry.size) {
+        recommendations = [...caseRegistry.values()].slice(0, MAX_RECOMMENDATIONS).map((candidate) => ({
+          ...candidate,
+          fitScore: null,
+          fitSummary: "这是根据你的分数和问题从西浦真实历史案例中检索到的相关记录。它用于提供参考，不代表录取概率。",
+          tradeoffs: [],
+          evidenceCaseIds: candidate.caseIds.slice(0, 8),
+          sourceUrls: [],
+        }));
+      }
       return {
         agentVersion: "v4",
         answer: boundedText(parsed.answer) || "已完成分析。",

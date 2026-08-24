@@ -18,7 +18,9 @@ function boundedList(value, limit = 8) {
 }
 
 function inferAverage(query) {
-  const match = text(query).match(/(?:均分|平均分|成绩|分数|绩点)[^0-9]{0,8}(\d{2}(?:\.\d+)?)/i);
+  const source = text(query);
+  const match = source.match(/(?:均分|平均分|成绩|分数|绩点)[^0-9]{0,8}(\d{2,3}(?:\.\d+)?)/i)
+    || source.match(/(?:^|[^\d.])(\d{2,3}(?:\.\d+)?)\s*(?:多|左右|上下)?\s*分(?!钟)/i);
   const value = numeric(match?.[1], null);
   return value !== null && value >= 0 && value <= 100 ? value : null;
 }
