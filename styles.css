@@ -359,6 +359,9 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 }
 
 .ai-recommendation-reason { margin: 10px 0 0; color: #425056; line-height: 1.6; }
+.ai-recommendation-insight { display: grid; gap: 6px; margin: 11px 0 12px; padding: 9px 10px; border-left: 3px solid #b7d6cf; background: #f5f9f7; }
+.ai-recommendation-insight p { min-height: 0; margin: 0; color: #425056; line-height: 1.55; }
+.ai-recommendation-insight strong { display: inline-block; min-width: 66px; margin-right: 5px; color: var(--ink); }
 .ai-prompt-actions button:disabled { opacity: .65; cursor: wait; }
 
 .ai-mode-status[hidden] { display: none; }

@@ -332,6 +332,7 @@
     const tiers = chooseAiTiers(candidates);
     const tags = [
       profile.major ? `本科：${profile.major}` : "本科专业：未识别",
+      profile.isMajorTransition ? "申请类型：转专业" : "",
       profile.average !== null ? `均分：${profile.average}` : "均分：未识别（暂按70匹配）",
       profile.country ? `地区：${profile.country}` : "地区：不限",
       profile.qs ? `目标：QS前${profile.qs}` : "QS：不限",
@@ -358,6 +359,10 @@
   const AI_MODE = window.XIPU_AI_MODE || (AI_API_URL ? "llm" : "local");
 
   function backendRecommendationMarkup(candidate) {
+    const official = candidate.officialCourse && candidate.officialCourse.status === "ok" ? candidate.officialCourse : null;
+    const officialMarkup = official
+      ? `<p><strong>官方课程资料</strong><a href="${escapeHtml(official.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(official.title || "查看官方课程页面")}</a></p>`
+      : `<p><strong>官方课程资料</strong>课程背景待核实</p>`;
     return `<article class="ai-recommendation">
       <h4>${escapeHtml(candidate.university)}</h4>
       <p>${escapeHtml(candidate.program)}</p>
@@ -365,8 +370,14 @@
         ${candidate.rank !== null ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
         <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
         <span>${candidate.count} 条相似记录</span>
+        ${candidate.fitScore !== null && candidate.fitScore !== undefined ? `<span>AI软匹配 ${Math.round(candidate.fitScore)}</span>` : ""}
       </div>
-      <p class="ai-recommendation-reason">${escapeHtml(candidate.reason || "基于历史案例匹配。")}</p>
+      <div class="ai-recommendation-insight">
+        <p><strong>项目方向</strong>${escapeHtml(candidate.programFocus || "课程背景待核实")}</p>
+        <p><strong>与你的匹配</strong>${escapeHtml(candidate.fitSummary || "暂未生成个性化匹配说明。")}</p>
+        ${Array.isArray(candidate.tradeoffs) && candidate.tradeoffs.length ? `<p><strong>需要注意</strong>${escapeHtml(candidate.tradeoffs.join("；"))}</p>` : ""}
+        ${officialMarkup}
+      </div>
       <button type="button" data-ai-ids="${escapeHtml(candidate.caseIds.join(","))}">查看 ${candidate.count} 条相似案例 →</button>
     </article>`;
   }
@@ -388,7 +399,7 @@
       profile.careerGoal ? `职业：${profile.careerGoal}` : "职业目标：未识别",
       ...(Array.isArray(profile.softPreferences) && profile.softPreferences.length ? [`偏好：${profile.softPreferences.map((item) => `${item.name}=${item.value}`).join("、")}`] : []),
       ...(Array.isArray(profile.avoidTopics) && profile.avoidTopics.length ? [`排除：${profile.avoidTopics.join("、")}`] : []),
-    ];
+    ].filter(Boolean);
     elements.aiProfileSummary.innerHTML = tags.map((tag) => `<span class="ai-profile-tag">${escapeHtml(tag)}</span>`).join("");
     elements.aiSummaryText.textContent = result.summary || `已从 ${number.format(data.stats.cases)} 条真实案例中生成选校建议。`;
     if (result.needsClarification) {
