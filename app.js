@@ -288,7 +288,49 @@
     elements.aiProfileSummary.replaceChildren();
   }
 
+  function parseEmbeddedAgentJson(value) {
+    const source = String(value || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
+    try { return JSON.parse(source); } catch {
+      let repaired = "";
+      let inString = false;
+      let escaped = false;
+      for (const character of source) {
+        if (escaped) {
+          repaired += character;
+          escaped = false;
+          continue;
+        }
+        if (character === "\\" && inString) {
+          repaired += character;
+          escaped = true;
+          continue;
+        }
+        if (character === '"') {
+          repaired += character;
+          inString = !inString;
+          continue;
+        }
+        if (inString && character === "\n") repaired += "\\n";
+        else if (inString && character === "\r") repaired += "\\r";
+        else if (inString && character === "\t") repaired += "\\t";
+        else repaired += character;
+      }
+      try { return JSON.parse(repaired); } catch { return null; }
+    }
+  }
+
+  function normalizeAgentResult(result) {
+    if (!result || typeof result !== "object") return result;
+    if (Array.isArray(result.recommendations) && result.recommendations.length) return result;
+    if (typeof result.answer !== "string" || !/^\s*\{/.test(result.answer)) return result;
+    const nested = parseEmbeddedAgentJson(result.answer);
+    return nested && typeof nested === "object" && (nested.answer || nested.recommendations)
+      ? { ...result, ...nested, answer: nested.answer || result.answer }
+      : result;
+  }
+
   function renderAgentAnalysis(result) {
+    result = normalizeAgentResult(result);
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
       elements.aiModeStatus.textContent = `🟢 V4 Agent：${result.usedTools?.length ? result.usedTools.join(" + ") : "直接回答"}`;

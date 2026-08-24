@@ -187,3 +187,40 @@ test("Agent treats an explicit GPA as a case-search signal", async () => {
   assert.equal(calls, 2);
   assert.deepEqual(result.usedTools, ["search_xipu_cases"]);
 });
+
+test("Agent repairs provider JSON with an unescaped newline and keeps recommendations", async () => {
+  const candidate = searchXipuCases({
+    query: "应用数学76分英国案例",
+    major: "应用数学",
+    average: 76,
+    country: "英国",
+    city: null,
+    targetDirection: null,
+    learningInterest: [],
+    qsRanking: null,
+    preferences: [],
+    limit: 3,
+  }, fixture).candidates[0];
+  let calls = 0;
+  const fakeModel = async () => {
+    calls += 1;
+    if (calls === 1) return { output_text: JSON.stringify({ answer: "先检索案例。", needsClarification: false, clarificationQuestions: [], recommendations: [] }) };
+    const valid = JSON.stringify({
+      answer: "第一行\n第二行",
+      needsClarification: false,
+      clarificationQuestions: [],
+      recommendations: [{
+        candidateKey: candidate.candidateKey,
+        fitScore: 80,
+        fitSummary: "案例背景接近。",
+        tradeoffs: [],
+        evidenceCaseIds: ["XPU-TEST-1"],
+        sourceUrls: [],
+      }],
+    });
+    return { output_text: valid.replace("\\n", "\n") };
+  };
+  const result = await runAgent({ message: "我76分，哪些英国项目值得考虑？", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: false });
+  assert.equal(result.answer, "第一行\n第二行");
+  assert.equal(result.recommendations.length, 1);
+});

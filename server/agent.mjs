@@ -70,6 +70,43 @@ function parseJsonText(value) {
   }
 }
 
+function repairJsonControlCharacters(value) {
+  const source = String(value || "");
+  let repaired = "";
+  let inString = false;
+  let escaped = false;
+  for (const character of source) {
+    if (escaped) {
+      repaired += character;
+      escaped = false;
+      continue;
+    }
+    if (character === "\\" && inString) {
+      repaired += character;
+      escaped = true;
+      continue;
+    }
+    if (character === '"') {
+      repaired += character;
+      inString = !inString;
+      continue;
+    }
+    if (inString && character === "\n") repaired += "\\n";
+    else if (inString && character === "\r") repaired += "\\r";
+    else if (inString && character === "\t") repaired += "\\t";
+    else repaired += character;
+  }
+  return repaired;
+}
+
+function parseJsonWithRepair(value) {
+  try { return parseJsonText(value); }
+  catch (firstError) {
+    try { return parseJsonText(repairJsonControlCharacters(value)); }
+    catch { throw firstError; }
+  }
+}
+
 function outputText(response) {
   if (typeof response?.output_text === "string" && response.output_text.trim()) return response.output_text.trim();
   const chunks = [];
@@ -94,7 +131,7 @@ function normalizeParsedAgentPayload(parsed) {
   let payload = parsed;
   if (typeof parsed.answer === "string" && /^\s*\{/.test(parsed.answer)) {
     try {
-      const nested = parseJsonText(parsed.answer);
+      const nested = parseJsonWithRepair(parsed.answer);
       if (nested && typeof nested === "object" && (nested.answer || nested.recommendations)) {
         payload = { ...parsed, ...nested, answer: nested.answer || parsed.answer };
         if (!Array.isArray(nested.recommendations) && Array.isArray(parsed.recommendations)) payload.recommendations = parsed.recommendations;
@@ -301,7 +338,7 @@ export async function runAgent({
       const rawAnswer = outputText(response);
       if (!rawAnswer) return fallbackAgentResult("模型没有返回可显示的回答。", usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
       let parsed;
-      try { parsed = normalizeParsedAgentPayload(parseJsonText(rawAnswer)); }
+      try { parsed = normalizeParsedAgentPayload(parseJsonWithRepair(rawAnswer)); }
       catch { return fallbackAgentResult(rawAnswer, usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch); }
       let recommendations = Array.isArray(parsed.recommendations)
         ? parsed.recommendations.map((item) => sanitizeRecommendation(item, caseRegistry, sourceRegistry)).filter(Boolean).slice(0, MAX_RECOMMENDATIONS)
