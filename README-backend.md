@@ -31,7 +31,7 @@ The V3 backend first calls the OpenAI Responses API with strict JSON Schema outp
 
 V4 adds `POST /api/ai-agent` without replacing V3. The Agent receives two tools: the custom `search_xipu_cases` function, which reuses the existing matcher and returns only real case records, and the Responses API hosted `web_search` tool for current university pages. The Agent may call either tool, both tools in multiple turns, or neither. It validates candidate keys, case IDs, and official source URLs before returning the result.
 
-The current frontend continues to call `/api/ai-recommend`. Switch it to `/api/ai-agent` only after the provider has been verified to support Responses API function tools and the hosted `web_search` tool. A One API proxy may support function calling but reject hosted web search; the Agent automatically retries without web search when the provider reports that tool as unsupported.
+The frontend AI view now sends the complete user message to `/api/ai-agent`; it no longer performs the retired V3 keyword parser or silently falls back to local matching. The original `/api/ai-recommend` endpoint remains available for rollback. A One API proxy may support function calling but reject hosted web search; the Agent automatically retries without web search when the provider reports that tool as unsupported.
 
 ## Security
 
