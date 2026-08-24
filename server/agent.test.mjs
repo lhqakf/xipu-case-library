@@ -40,6 +40,7 @@ test("search_xipu_cases returns only real fixture records", () => {
   assert.equal(result.count, 1);
   assert.equal(result.candidates[0].caseIds[0], "XPU-TEST-1");
   assert.match(result.candidates[0].candidateKey, /^case_/);
+  assert.equal(result.candidates[0].tier, "match");
 });
 
 test("search_xipu_cases infers a bare percentage score from the query", () => {

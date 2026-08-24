@@ -182,6 +182,7 @@ function sanitizeRecommendation(item, caseRegistry, sourceRegistry) {
   const fitScore = Number(item.fitScore);
   return {
     candidateKey: candidate.candidateKey,
+    tier: ["challenge", "match", "safe"].includes(candidate.tier) ? candidate.tier : "match",
     university: candidate.university,
     program: candidate.program,
     country: candidate.country,

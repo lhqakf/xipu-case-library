@@ -76,6 +76,7 @@
     aiProfileSummary: $("#aiProfileSummary"),
     aiSummaryText: $("#aiSummaryText"),
     aiTierGrid: $("#aiTierGrid"),
+    aiAgentSources: $("#aiAgentSources"),
   };
 
   function escapeHtml(value) {
@@ -272,6 +273,15 @@
     </article>`;
   }
 
+  function renderAgentSources(sources) {
+    if (!elements.aiAgentSources) return;
+    const cleanSources = Array.isArray(sources) ? sources.filter((source) => source?.url).slice(0, 8) : [];
+    elements.aiAgentSources.hidden = !cleanSources.length;
+    elements.aiAgentSources.innerHTML = cleanSources.length
+      ? `<div class="ai-agent-sources-head"><strong>参考来源</strong><span>联网检索到的官方页面</span></div><div class="ai-agent-sources-list">${cleanSources.map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || source.url)}</a>`).join("")}</div>`
+      : "";
+  }
+
   function renderAgentAnalysis(result) {
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
@@ -283,11 +293,18 @@
     elements.aiSummaryText.classList.remove("ai-error-message");
     elements.aiSummaryText.textContent = result.answer || "Agent 已完成分析。";
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
-    const tierConfig = [["challenge", "Agent建议", "基于工具结果整理"], ["match", "案例证据", "来自西浦真实历史案例"], ["safe", "官方来源", "来自联网检索结果"]];
-    elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note], index) => `<section class="ai-tier ${key}">
+    elements.aiTierGrid.hidden = !recommendations.length;
+    const tierRecommendations = { challenge: [], match: [], safe: [] };
+    recommendations.forEach((candidate) => {
+      const tier = ["challenge", "match", "safe"].includes(candidate?.tier) ? candidate.tier : "match";
+      tierRecommendations[tier].push(candidate);
+    });
+    const tierConfig = [["challenge", "冲刺", "历史案例要求相对更高"], ["match", "匹配", "与当前背景较为接近"], ["safe", "保底", "历史案例分数相对友好"]];
+    elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
       <div class="ai-tier-head"><strong>${title}</strong><span>${note}</span></div>
-      ${index === 0 && recommendations.length ? recommendations.map(agentRecommendationMarkup).join("") : index === 0 ? '<div class="ai-tier-empty">本次回答不需要案例推荐</div>' : index === 1 && recommendations.length ? '<div class="ai-tier-empty">案例信息已合并在 Agent 建议中</div>' : index === 2 && result.sources?.length ? result.sources.slice(0, 6).map((source) => `<div class="ai-recommendation"><a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || source.url)}</a></div>`).join("") : '<div class="ai-tier-empty">暂无单独来源</div>'}
+      ${tierRecommendations[key].length ? tierRecommendations[key].map(agentRecommendationMarkup).join("") : '<div class="ai-tier-empty">暂无符合当前条件的项目</div>'}
     </section>`).join("");
+    renderAgentSources(result.sources);
     elements.aiAnalysis.hidden = false;
     elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
   }
@@ -298,6 +315,8 @@
       return;
     }
     const profile = result.profile || {};
+    renderAgentSources([]);
+    elements.aiTierGrid.hidden = false;
     elements.aiProfileSummary.hidden = false;
     if (elements.aiModeStatus) {
       elements.aiModeStatus.hidden = false;
@@ -341,6 +360,8 @@
     if (!AI_API_URL) {
       elements.aiSummaryText.classList.add("ai-error-message");
       elements.aiSummaryText.textContent = "Agent 接口未配置，请检查网站配置。";
+      renderAgentSources([]);
+      elements.aiTierGrid.hidden = true;
       elements.aiAnalyzeButton.disabled = false;
       elements.aiAnalyzeButton.textContent = originalLabel;
       return;
@@ -371,6 +392,8 @@
       }
       elements.aiSummaryText.classList.add("ai-error-message");
       elements.aiSummaryText.textContent = `V4 Agent 暂时不可用：${error.message || "请稍后重试"}`;
+      renderAgentSources([]);
+      elements.aiTierGrid.hidden = true;
     } finally {
       elements.aiAnalyzeButton.disabled = false;
       elements.aiAnalyzeButton.textContent = originalLabel;

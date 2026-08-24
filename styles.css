@@ -253,7 +253,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .ai-profile-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
 .ai-profile-tag { padding: 6px 9px; border-radius: 4px; color: #425056; background: #eef2f1; font-size: 12px; }
 .ai-summary-text { margin: 15px 0 20px; color: #4d595f; line-height: 1.7; }
-.ai-tier-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.ai-tier-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
 .ai-tier { min-width: 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
 .ai-tier-head { padding: 13px 14px; border-bottom: 1px solid var(--line); background: #f7f8f7; }
 .ai-tier-head strong { display: block; }
@@ -274,6 +274,11 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .ai-program-requirements.pending { color: #899398; background: #fafafa; }
 .ai-recommendation button { margin-top: 10px; padding: 0; border: 0; color: var(--red-dark); background: transparent; font-size: 12px; font-weight: 700; }
 .ai-tier-empty { padding: 24px 14px; color: var(--muted); font-size: 12px; text-align: center; }
+.ai-agent-sources { margin-top: 14px; padding: 13px 14px; border: 1px solid var(--line); border-radius: 7px; background: #fbfcfb; }
+.ai-agent-sources-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; color: var(--ink); font-size: 12px; }
+.ai-agent-sources-head span { color: var(--muted); font-size: 11px; }
+.ai-agent-sources-list { display: flex; flex-wrap: wrap; gap: 7px 14px; margin-top: 9px; }
+.ai-agent-sources-list a { max-width: 100%; overflow: hidden; color: var(--teal); font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .ai-disclaimer { margin: 18px 0 0; color: #879196; font-size: 11px; text-align: center; }
 
 @media (max-width: 900px) {

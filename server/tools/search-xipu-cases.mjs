@@ -47,6 +47,13 @@ function candidateKey(candidate) {
   return `case_${stableHash(`${app.university || ""}|${app.program || ""}`)}`;
 }
 
+function recommendationTier(candidate, applicantAverage) {
+  if (!Number.isFinite(applicantAverage)) return "match";
+  if (candidate.delta > 1.5) return "challenge";
+  if (candidate.delta < -1.5) return "safe";
+  return "match";
+}
+
 function normalizeToolArguments(argumentsValue, caseData) {
   const args = argumentsValue && typeof argumentsValue === "object" ? argumentsValue : {};
   const query = boundedText(args.query, 1200);
@@ -115,7 +122,10 @@ export function searchXipuCases(argumentsValue, caseData) {
     .slice(0, limit)
     .map((candidate) => {
       const key = candidateKey(candidate);
-      return serializeCandidate(candidate, key, "agent");
+      return {
+        ...serializeCandidate(candidate, key, "agent"),
+        tier: recommendationTier(candidate, normalized.profile.average),
+      };
     });
   const limitations = [];
   if (normalized.city) limitations.push("案例库目前没有独立城市字段，城市条件未用于精确筛选。");
