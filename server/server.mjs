@@ -25,6 +25,7 @@ try {
 const port = Number(process.env.PORT || 4173);
 const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
 const oneApiBaseURL = process.env.OPENAI_BASE_URL || "";
+const apiAuthHeader = String(process.env.OPENAI_AUTH_HEADER || "x-api-key").trim().toLowerCase();
 const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY);
 const maxBodyBytes = 16 * 1024;
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:4173,http://localhost:5500,http://localhost:8787")
@@ -41,9 +42,10 @@ async function createModelResponse(request) {
   if (!oneApiBaseURL) throw new Error("OPENAI_BASE_URL 未配置，无法确认正在调用公司 One API");
   if (!model) throw new Error("OPENAI_MODEL 未配置");
   const endpoint = oneApiBaseURL.replace(/\/+$/, "") + "/responses";
+  const authValue = apiAuthHeader === "authorization" ? `Bearer ${apiKey}` : apiKey;
   const result = await fetch(endpoint, {
     method: "POST",
-    headers: { "content-type": "application/json", "x-api-key": apiKey },
+    headers: { "content-type": "application/json", [apiAuthHeader]: authValue },
     body: JSON.stringify(request),
   });
   const body = await result.text();
