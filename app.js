@@ -395,10 +395,14 @@
       profile.average !== null && profile.average !== undefined ? `均分：${profile.average}` : "均分：未识别",
       profile.country ? `地区：${profile.country}` : "地区：不限",
       profile.qsRanking ? `目标：QS前${profile.qsRanking}` : "QS：不限",
-      profile.targetProgram ? `目标专业：${profile.targetProgram}` : "目标专业：未识别",
+      profile.applicationTarget ? `申请目标：${profile.applicationTarget}` : "申请目标：未明确",
+      ...(Array.isArray(profile.learningInterest) && profile.learningInterest.length ? [`学习兴趣：${profile.learningInterest.join("、")}`] : []),
+      profile.studyIntent === "exploring" ? "当前意图：了解探索" : "",
+      profile.studyIntent === "future_interest" ? "当前意图：未来兴趣" : "",
       profile.careerGoal ? `职业：${profile.careerGoal}` : "职业目标：未识别",
       ...(Array.isArray(profile.softPreferences) && profile.softPreferences.length ? [`偏好：${profile.softPreferences.map((item) => `${item.name}=${item.value}`).join("、")}`] : []),
       ...(Array.isArray(profile.avoidTopics) && profile.avoidTopics.length ? [`排除：${profile.avoidTopics.join("、")}`] : []),
+      ...(Array.isArray(profile.uncertainties) && profile.uncertainties.length ? [`待确认：${profile.uncertainties.join("；")}`] : []),
     ].filter(Boolean);
     elements.aiProfileSummary.innerHTML = tags.map((tag) => `<span class="ai-profile-tag">${escapeHtml(tag)}</span>`).join("");
     elements.aiSummaryText.textContent = result.summary || `已从 ${number.format(data.stats.cases)} 条真实案例中生成选校建议。`;

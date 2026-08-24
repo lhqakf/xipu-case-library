@@ -57,7 +57,7 @@ function findMajorMention(value, majors) {
 
 function inferMajorTransition(rawText, extractedMajor, extractedTargetProgram, majors) {
   const source = text(rawText);
-  const marker = /转专业|转到|转向|跨专业(?:到|申请)?|转(?:入|学|读)?[^，。；\n]{0,12}(?:专业|方向)/.exec(source);
+  const marker = /转专业|转到|转向|跨专业(?:到|申请)?|转(?:入|学|读)?[^，。；\n]{0,12}(?:专业|方向|读研|申请|硕士|研究生)/.exec(source);
   if (!marker) return { major: text(extractedMajor), targetProgram: text(extractedTargetProgram), isMajorTransition: false };
   const before = source.slice(0, marker.index);
   const after = source.slice(marker.index + marker[0].length);
@@ -79,7 +79,17 @@ export function normalizeProfile(extracted, rawText, data) {
   const average = numeric(extracted && extracted.average, null);
   const qsRanking = numeric(extracted && extracted.qsRanking, null);
   const intake = text(extracted && extracted.intake);
-  const transition = inferMajorTransition(rawText, extracted && extracted.major, extracted && extracted.targetProgram, filters.majors || []);
+  const studyIntentValues = new Set(["applying", "exploring", "future_interest", "career_only", "unclear"]);
+  const studyIntent = studyIntentValues.has(text(extracted && extracted.studyIntent)) ? text(extracted.studyIntent) : "unclear";
+  const applicationTarget = text(extracted && extracted.applicationTarget)
+    || (studyIntent === "applying" ? text(extracted && extracted.targetProgram) : "");
+  const learningInterest = Array.isArray(extracted && extracted.learningInterest)
+    ? extracted.learningInterest.map(text).filter(Boolean).slice(0, 8)
+    : [];
+  const uncertainties = Array.isArray(extracted && extracted.uncertainties)
+    ? extracted.uncertainties.map(text).filter(Boolean).slice(0, 8)
+    : [];
+  const transition = inferMajorTransition(rawText, extracted && extracted.major, applicationTarget, filters.majors || []);
   const targetProgram = transition.targetProgram;
   const careerGoal = text(extracted && extracted.careerGoal);
   const coursePreferences = Array.isArray(extracted && extracted.coursePreferences)
@@ -102,7 +112,7 @@ export function normalizeProfile(extracted, rawText, data) {
   const clarificationQuestions = Array.isArray(extracted && extracted.clarificationQuestions)
     ? extracted.clarificationQuestions.map(text).filter(Boolean).slice(0, 3)
     : [];
-  const targetText = [targetProgram, careerGoal, coursePreferences.join(" ")].filter(Boolean).join(" ");
+  const targetText = [targetProgram, learningInterest.join(" "), careerGoal, coursePreferences.join(" ")].filter(Boolean).join(" ");
   const lowerTargetText = targetText.toLocaleLowerCase("zh-CN");
   const freeKeywords = tokenize(targetProgram).concat(tokenize(coursePreferences.join(" "))).concat(tokenize(careerGoal));
   const targetGroup = TARGET_GROUPS.find((group) => group.triggers.some((word) => lowerTargetText.includes(word.toLocaleLowerCase("zh-CN"))));
@@ -118,12 +128,16 @@ export function normalizeProfile(extracted, rawText, data) {
     country,
     qsRanking: qsRanking !== null && qsRanking > 0 ? qsRanking : null,
     intake,
+    applicationTarget: targetProgram,
     targetProgram,
+    learningInterest,
+    studyIntent,
     careerGoal,
     coursePreferences,
     softPreferences,
     avoidTopics,
     missingInformation,
+    uncertainties,
     clarificationQuestions,
     needsClarification: Boolean(extracted && extracted.needsClarification) && clarificationQuestions.length > 0,
     targetLabel: targetGroup ? targetGroup.label : "",
