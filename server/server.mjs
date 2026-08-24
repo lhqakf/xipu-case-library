@@ -4,6 +4,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { loadCaseData } from "./data-loader.mjs";
 import { chooseAiTiers, getAiCandidates, normalizeProfile, numeric, serializeCandidate } from "./matcher.mjs";
+import { runAgent } from "./agent.mjs";
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const envFile = path.join(projectRoot, ".env");
@@ -27,6 +28,12 @@ const model = process.env.OPENAI_MODEL || "gpt-5.6-luna";
 const oneApiBaseURL = process.env.OPENAI_BASE_URL || "";
 const apiAuthHeader = String(process.env.OPENAI_AUTH_HEADER || "x-api-key").trim().toLowerCase();
 const apiKeyConfigured = Boolean(process.env.OPENAI_API_KEY);
+const webSearchEnabled = !["0", "false", "off", "no"].includes(String(process.env.OPENAI_WEB_SEARCH || "true").trim().toLowerCase());
+const webSearchContextSize = ["low", "medium", "high"].includes(String(process.env.OPENAI_WEB_SEARCH_CONTEXT || "medium").trim().toLowerCase())
+  ? String(process.env.OPENAI_WEB_SEARCH_CONTEXT || "medium").trim().toLowerCase()
+  : "medium";
+const agentMaxTurns = Math.max(1, Math.min(8, Number(process.env.OPENAI_AGENT_MAX_TURNS || 6)));
+const agentMaxToolCalls = Math.max(1, Math.min(12, Number(process.env.OPENAI_AGENT_MAX_TOOL_CALLS || 8)));
 const maxBodyBytes = 16 * 1024;
 const allowedOrigins = (process.env.FRONTEND_ORIGIN || "http://localhost:4173,http://localhost:5500,http://localhost:8787")
   .split(",")
@@ -363,6 +370,19 @@ async function recommend(message) {
   };
 }
 
+async function agentRecommend(message) {
+  return runAgent({
+    message,
+    caseData,
+    model,
+    webSearchEnabled,
+    webSearchContextSize,
+    maxTurns: agentMaxTurns,
+    maxToolCalls: agentMaxToolCalls,
+    requestModelResponse: createModelResponse,
+  });
+}
+
 const staticMimeTypes = {
   ".html": "text/html; charset=utf-8",
   ".js": "text/javascript; charset=utf-8",
@@ -421,6 +441,11 @@ const server = http.createServer(async (request, response) => {
       lastOneApiSuccessAt,
       lastOneApiResponseId,
       providerBaseURL: oneApiBaseURL || null,
+      webSearchEnabled,
+      webSearchContextSize,
+      agentEndpoint: "/api/ai-agent",
+      agentMaxTurns,
+      agentMaxToolCalls,
       note: lastOneApiSuccessAt ? "公司 One API 已返回成功的 Responses API 响应" : "尚未验证成功调用公司 One API",
     }, origin);
     return;
@@ -429,7 +454,9 @@ const server = http.createServer(async (request, response) => {
     await serveStatic(request, response);
     return;
   }
-  if (request.method !== "POST" || request.url !== "/api/ai-recommend") {
+  const isRecommendationRoute = request.method === "POST" && request.url === "/api/ai-recommend";
+  const isAgentRoute = request.method === "POST" && request.url === "/api/ai-agent";
+  if (!isRecommendationRoute && !isAgentRoute) {
     jsonResponse(response, 404, { error: "Not found" }, origin);
     return;
   }
@@ -444,10 +471,10 @@ const server = http.createServer(async (request, response) => {
       jsonResponse(response, 400, { error: "message is too long" }, origin);
       return;
     }
-    const result = await recommend(message);
+    const result = isAgentRoute ? await agentRecommend(message) : await recommend(message);
     jsonResponse(response, 200, result, origin);
   } catch (error) {
-    console.error("AI recommendation failed:", error instanceof Error ? error.message : error);
+    console.error(isAgentRoute ? "AI agent failed:" : "AI recommendation failed:", error instanceof Error ? error.message : error);
     const status = error && /Request is too large|JSON/.test(String(error.message || error)) ? 400 : 502;
     const detail = error instanceof Error ? error.message : String(error);
     jsonResponse(response, status, { error: "OpenAI 请求失败", detail, model, providerBaseURL: oneApiBaseURL || "https://api.openai.com/v1" }, origin);

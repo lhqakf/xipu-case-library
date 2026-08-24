@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node server/server.mjs",
-    "dev": "node --watch server/server.mjs"
+    "dev": "node --watch server/server.mjs",
+    "test": "node --test server/*.test.mjs"
   }
 }
