@@ -226,7 +226,7 @@ async function attachOfficialEvidence(candidates) {
   }));
 }
 
-const extractionSemanticsPrompt = "你是自然语言留学需求理解器，不是关键词分类器。先完整理解用户原话，再输出结构化画像。current major 是用户现在的本科专业；applicationTarget 只有在用户明确表达申请、读研、硕士、转专业、目标项目或准备入读时才填写。targetProgram 是 applicationTarget 的兼容别名，若没有明确申请意图必须为 null。learningInterest 专门记录‘以后想学、想了解、感兴趣、可能学习’的方向，它不等于申请目标。studyIntent 用 applying 表示明确申请，exploring 表示了解/探索，future_interest 表示未来想学但尚未决定申请，career_only 表示只谈职业，unclear 表示无法判断。‘以后想做数据分析师’是 careerGoal，不是 learningInterest；‘以后想学数据科学’是 learningInterest，不是 applicationTarget。只有出现申请/读研/硕士/转入等语境，才把方向写入 applicationTarget。softPreferences 记录偏实践、少编程、喜欢案例、在意就业等开放式偏好。保留用户原话中的不确定性到 uncertainties，不要擅自补全事实。若用户没有明确申请目标，不要因为 learningInterest 就伪造 targetProgram；可以继续给探索性建议，并在 clarificationQuestions 中询问是否准备申请。";
+const extractionSemanticsPrompt = "你是自然语言留学需求理解器，不是关键词分类器。先完整理解用户原话，再输出结构化画像。current major 是用户现在的本科专业；applicationTarget 只有在用户明确表达申请、读研、硕士、转专业、目标项目或准备入读时才填写。targetProgram 是 applicationTarget 的兼容别名，若没有明确申请意图必须为 null。learningInterest 专门记录‘以后想学、想了解、感兴趣、可能学习’的方向，它不等于申请目标。studyIntent 用 applying 表示明确申请，exploring 表示了解/探索，future_interest 表示未来想学但尚未决定申请，career_only 表示只谈职业，unclear 表示无法判断。‘以后想做数据分析师’是 careerGoal，不是 learningInterest；‘以后想学数据科学’是 learningInterest，不是 applicationTarget。只有出现申请/读研/硕士/转入等语境，才把方向写入 applicationTarget。softPreferences 记录偏实践、少编程、喜欢案例、在意就业等开放式偏好。保留用户原话中的不确定性到 uncertainties，不要擅自补全事实。信息不完整时仍然继续生成分析，不要阻塞用户，不要要求用户先补充字段；可以把不确定性写入 uncertainties 和 clarificationQuestions，供最终 GPT 在回答中自然说明。";
 
 async function extractProfile(message) {
   const response = await createModelResponse({
@@ -271,34 +271,6 @@ async function generateAdvice(originalMessage, profile, candidates) {
 async function recommend(message) {
   const extracted = await extractProfile(message);
   const profile = normalizeProfile(extracted, message, caseData);
-  if (profile.needsClarification) {
-    return {
-      profile: {
-        rawText: profile.rawText,
-        major: profile.major || null,
-        isMajorTransition: profile.isMajorTransition,
-        average: profile.average,
-        country: profile.country || null,
-        qsRanking: profile.qsRanking,
-        intake: profile.intake || null,
-        applicationTarget: profile.applicationTarget || null,
-        targetProgram: profile.targetProgram || null,
-        learningInterest: profile.learningInterest,
-        studyIntent: profile.studyIntent,
-        careerGoal: profile.careerGoal || null,
-        coursePreferences: profile.coursePreferences,
-        softPreferences: profile.softPreferences,
-        avoidTopics: profile.avoidTopics,
-        missingInformation: profile.missingInformation,
-        uncertainties: profile.uncertainties,
-      },
-      needsClarification: true,
-      clarificationQuestions: profile.clarificationQuestions,
-      summary: "为了给出更准确的案例匹配，请先补充以下信息。",
-      mode: "llm",
-      model,
-    };
-  }
   const candidates = await attachOfficialEvidence(getAiCandidates(caseData, profile).map((candidate, index) => {
     candidate.candidateKey = "c" + index;
     return candidate;
@@ -382,6 +354,8 @@ async function recommend(message) {
     },
     candidatesCount: candidates.length,
     summary: advice.summary || "已根据历史案例生成建议。",
+    needsClarification: false,
+    clarificationQuestions: profile.clarificationQuestions,
     tiers,
     mode: "llm",
     model,
