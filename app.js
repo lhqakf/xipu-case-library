@@ -134,7 +134,6 @@
   }
 
   function setupData() {
-    $("#updatedDate").textContent = data.meta.updated;
     $("#metricCases").textContent = number.format(data.stats.cases);
     $("#metricUniversities").textContent = number.format(data.stats.universities);
     $("#metricPrograms").textContent = number.format(data.stats.programs);

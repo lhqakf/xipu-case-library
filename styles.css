@@ -51,7 +51,6 @@ button:focus-visible, input:focus-visible, select:focus-visible { outline: 3px s
 }
 .brand-name { font-size: 17px; font-weight: 750; }
 .header-actions { display: flex; align-items: center; gap: 16px; }
-.data-date { color: var(--muted); font-size: 12px; }
 .icon-button {
   height: 34px;
   min-width: 48px;
@@ -294,7 +293,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
   .header-inner, .overview-inner, .workspace { width: min(100% - 28px, 560px); }
   .brand-mark { width: 45px; height: 28px; }
   .brand-name { font-size: 15px; }
-  .data-date, .saved-button { display: none; }
+  .saved-button { display: none; }
   .overview-inner { display: block; min-height: auto; padding: 22px 0 20px; }
   h1 { font-size: 27px; }
   .overview-meta { margin-top: 7px; font-size: 12px; }
