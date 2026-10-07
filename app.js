@@ -89,6 +89,13 @@
       .replaceAll("'", "&#039;");
   }
 
+  function aiAnswerMarkup(value) {
+    return escapeHtml(value || "")
+      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+      .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
+      .replace(/\n/g, "<br>");
+  }
+
   function optionMarkup(values) {
     return values.map((value) => `<option value="${escapeHtml(value)}">${escapeHtml(value)}</option>`).join("");
   }
@@ -349,7 +356,7 @@
     }
     clearLegacyAgentHint();
     elements.aiSummaryText.classList.remove("ai-error-message");
-    elements.aiSummaryText.textContent = result.answer || "Agent 已完成分析。";
+    elements.aiSummaryText.innerHTML = aiAnswerMarkup(result.answer || "Agent 已完成分析。");
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
     const hasRecommendations = recommendations.length > 0;
     elements.aiTierGrid.hidden = !hasRecommendations;
