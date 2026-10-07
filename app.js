@@ -192,7 +192,10 @@
       const average = numeric(caseItem.scores.average, null);
       if (state.minScore > 50 && (average === null || average < state.minScore)) return false;
       if (state.completeScores && !(caseItem.scores.y1 && caseItem.scores.y2 && caseItem.scores.y3)) return false;
-      if (state.scoreMatch && activeMatchYears().some((year) => numeric(caseItem.scores[year], null) === null)) return false;
+      if (state.scoreMatch) {
+        if (activeMatchYears().some((year) => numeric(caseItem.scores[year], null) === null)) return false;
+        if (["香港", "新加坡"].includes(application.country) && average === null) return false;
+      }
       if (query) {
         const haystack = [
           caseItem.id,
@@ -211,8 +214,13 @@
       if (state.scoreMatch) {
         const target = state.matchScores;
         const matchYears = activeMatchYears(target);
+        const targetAverage = matchYears.reduce((sum, year) => sum + target[year], 0) / matchYears.length;
         const differences = (item) => {
-          return matchYears.map((year) => Math.abs(numeric(item.scores[year], target[year]) - target[year]));
+          const yearDifferences = matchYears.map((year) => Math.abs(numeric(item.scores[year], target[year]) - target[year]));
+          if (["香港", "新加坡"].includes(item.application.country)) {
+            return [Math.abs(numeric(item.scores.average, targetAverage) - targetAverage), ...yearDifferences];
+          }
+          return yearDifferences;
         };
         const aDiff = differences(a);
         const bDiff = differences(b);
