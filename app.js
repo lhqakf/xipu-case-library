@@ -533,8 +533,15 @@
     if (state.completeScores) entries.push(["completeScores", "三年成绩完整"]);
     if (state.scoreMatch) {
       const labels = { y1: "大一", y2: "大二", y3: "大三" };
-      const summary = activeMatchYears().slice().reverse().map((year) => `${labels[year]} ${state.matchScores[year]}`).join("、");
-      entries.push(["scoreMatch", `成绩匹配：${summary}`]);
+      const matchYears = activeMatchYears();
+      const summary = matchYears.slice().reverse().map((year) => `${labels[year]} ${state.matchScores[year]}`).join("、");
+      const targetAverage = Math.round(matchYears.reduce((sum, year) => sum + state.matchScores[year], 0) / matchYears.length);
+      const onlyHongKongAndSingapore = state.countries.length > 0
+        && state.countries.every((country) => ["香港", "新加坡"].includes(country));
+      const rule = onlyHongKongAndSingapore
+        ? `；目标均分 ${targetAverage}，按均分→大三→大二→大一排序`
+        : "";
+      entries.push(["scoreMatch", `成绩匹配：${summary}${rule}`]);
     }
     return entries;
   }
