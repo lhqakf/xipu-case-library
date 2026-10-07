@@ -38,7 +38,7 @@ const agentSystemPrompt = `你是西浦案例库 V4 Agent。你可以像普通 C
 
 工具选择规则：
 1. 用户明确提供带数值的均分、平均分、成绩、分数、GPA 或绩点时，默认必须调用 search_xipu_cases。最终回答仍然要正常回答用户的问题，并把西浦真实历史案例作为单独证据补充；案例不能替代 AI 分析。用户询问西浦历史录取案例、相似背景、某校以前是否有人拿到 offer 时，也调用 search_xipu_cases。
-2. 用户提供个人背景（例如本科专业、均分、目标方向）并要求个性化选校推荐时，先调用 search_xipu_cases。拿到候选项目后，必须调用 web_search 核验准备最终推荐的每个项目；搜索该项目的官方课程页面和官方入学要求页面，再生成最终推荐。优先大学官方域名，不要把中介、博客或排名网站当作课程事实。
+2. 用户提供个人背景（例如本科专业、均分、目标方向）并要求个性化选校推荐时，调用 search_xipu_cases，并优先依据真实案例完成快速匹配。只有用户明确要求课程内容、最新录取要求或官网核验时，才继续调用 web_search；不要为了普通案例匹配默认查询官网。
 3. 用户询问“哪些学校不收申请费”、雅思或托福要求、申请截止日期、大学官网、项目课程、申请要求、数学基础、编程量、课程难度或其他最新事实，但没有要求结合个人背景匹配案例时，不调用 search_xipu_cases，直接像通用问答助手一样调用 web_search 回答。此类列表问题要说明检索范围和核实时间；不能把检索到的部分学校表述为全部学校。
 4. 常识解释、概念解释或不需要案例和最新官网事实的问题，可以不调用工具。
 5. 信息不足时可以主动追问；不要为了凑工具调用而编造条件。
@@ -52,7 +52,7 @@ const agentSystemPrompt = `你是西浦案例库 V4 Agent。你可以像普通 C
 - 最终推荐中的 candidateKey、university、program 和 evidenceCaseIds 必须来自工具返回结果。
 - 最终回答要区分历史案例证据、官方页面事实和一般性建议，不把历史案例当作录取概率。
 
-最终输出必须是合法 JSON，字段为 answer、needsClarification、clarificationQuestions 和 recommendations。recommendations 最多 18 条；不需要推荐时返回空数组。`;
+最终输出必须是合法 JSON，字段为 answer、needsClarification、clarificationQuestions 和 recommendations。answer 控制在 800 个汉字以内，recommendations 最多 8 条；不需要推荐时返回空数组。`;
 
 function boundedText(value, maxLength = MAX_TEXT_LENGTH) {
   return String(value || "").trim().slice(0, maxLength);
@@ -287,6 +287,34 @@ function fallbackAgentResult(answer, usedTools, webSources, turns, toolCallCount
   };
 }
 
+function fallbackCaseRecommendations(caseRegistry) {
+  return [...caseRegistry.values()].slice(0, 8).map((candidate) => ({
+    ...candidate,
+    fitScore: null,
+    officialProgramUrl: null,
+    courseOverview: "官网信息待核实",
+    admissionRequirements: "官网信息待核实",
+    fitSummary: "这是根据你的成绩和申请方向从西浦真实历史案例中检索到的相关项目，用于选校参考，不代表录取概率。",
+    tradeoffs: [],
+    evidenceCaseIds: candidate.caseIds.slice(0, 8),
+    sourceUrls: [],
+  }));
+}
+
+function extractPartialAnswer(value) {
+  const source = String(value || "");
+  const startMarker = '"answer":"';
+  const start = source.indexOf(startMarker);
+  if (start < 0) return boundedText(source);
+  const contentStart = start + startMarker.length;
+  const endMarkers = ['","needsClarification"', '","recommendations"'];
+  const ends = endMarkers.map((marker) => source.indexOf(marker, contentStart)).filter((index) => index >= 0);
+  if (!ends.length) return "已完成案例检索，但模型输出过长。以下项目卡片来自真实历史案例。";
+  const encoded = source.slice(contentStart, Math.min(...ends));
+  try { return boundedText(JSON.parse(`"${encoded}"`)); }
+  catch { return "已完成案例检索，但模型输出格式异常。以下项目卡片来自真实历史案例。"; }
+}
+
 export async function runAgent({
   message,
   caseData,
@@ -310,7 +338,6 @@ export async function runAgent({
   let turn = 0;
   let toolCallCount = 0;
   let scoreSearchAttempted = false;
-  let officialVerificationRequested = false;
   const allowCaseSearch = !(isGeneralOfficialInfoQuery(message) && !hasScoreSignal(message));
 
   while (turn < Math.max(1, Math.min(8, maxTurns))) {
@@ -377,32 +404,21 @@ export async function runAgent({
         input.push({ role: "system", content: [{ type: "input_text", text: "用户明确提供了分数。请在正常回答用户问题的同时，结合刚才的西浦真实案例结果补充案例证据；不要只返回案例，也不要把案例当作录取保证。" }] });
         continue;
       }
-      if (caseRegistry.size && allowWebSearch && !usedTools.has("web_search") && !officialVerificationRequested) {
-        officialVerificationRequested = true;
-        input.push(...(Array.isArray(response?.output) ? response.output : []));
-        input.push({ role: "system", content: [{ type: "input_text", text: "已经取得真实案例候选。现在必须使用 web_search 查询你准备最终推荐的每个项目的大学官方课程页面和官方入学要求页面，然后才能给出最终推荐。每条推荐填写 courseOverview、admissionRequirements、officialProgramUrl 和 sourceUrls；找不到官方证据的内容写‘官网信息待核实’，不得凭常识补写。" }] });
-        continue;
-      }
       const rawAnswer = outputText(response);
       if (!rawAnswer) return fallbackAgentResult("模型没有返回可显示的回答。", usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
       let parsed;
       try { parsed = normalizeParsedAgentPayload(parseJsonWithRepair(rawAnswer)); }
-      catch { return fallbackAgentResult(rawAnswer, usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch); }
+      catch {
+        const fallback = fallbackAgentResult(extractPartialAnswer(rawAnswer), usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
+        fallback.recommendations = fallbackCaseRecommendations(caseRegistry);
+        fallback.model = model;
+        return fallback;
+      }
       let recommendations = Array.isArray(parsed.recommendations)
         ? parsed.recommendations.map((item) => sanitizeRecommendation(item, caseRegistry, sourceRegistry)).filter(Boolean).slice(0, MAX_RECOMMENDATIONS)
         : [];
       if (!recommendations.length && hasScoreSignal(message) && caseRegistry.size) {
-        recommendations = [...caseRegistry.values()].slice(0, MAX_RECOMMENDATIONS).map((candidate) => ({
-          ...candidate,
-          fitScore: null,
-          officialProgramUrl: null,
-          courseOverview: "官网信息待核实",
-          admissionRequirements: "官网信息待核实",
-          fitSummary: "这是根据你的分数和问题从西浦真实历史案例中检索到的相关记录。它用于提供参考，不代表录取概率。",
-          tradeoffs: [],
-          evidenceCaseIds: candidate.caseIds.slice(0, 8),
-          sourceUrls: [],
-        }));
+        recommendations = fallbackCaseRecommendations(caseRegistry);
       }
       return {
         agentVersion: "v4",

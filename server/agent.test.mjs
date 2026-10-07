@@ -121,7 +121,7 @@ test("Agent executes a function tool and validates the final candidate", async (
   assert.equal(result.meta.toolCallCount, 1);
 });
 
-test("Agent requires official web verification after case recommendations", async () => {
+test("Agent completes ordinary case matching without mandatory web verification", async () => {
   const candidate = searchXipuCases({
     query: "应用数学76分英国数据科学",
     major: "应用数学",
@@ -194,11 +194,10 @@ test("Agent requires official web verification after case recommendations", asyn
   };
 
   const result = await runAgent({ message: "我应用数学76分，想申请英国数据科学", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: true });
-  assert.equal(calls, 3);
-  assert.deepEqual(result.usedTools, ["search_xipu_cases", "web_search"]);
-  assert.equal(result.recommendations[0].officialProgramUrl, officialUrl);
-  assert.match(result.recommendations[0].courseOverview, /机器学习/);
-  assert.match(result.recommendations[0].admissionRequirements, /定量学科/);
+  assert.equal(calls, 2);
+  assert.deepEqual(result.usedTools, ["search_xipu_cases"]);
+  assert.equal(result.recommendations[0].candidateKey, candidate.candidateKey);
+  assert.equal(result.recommendations[0].officialProgramUrl, null);
 });
 
 test("Agent forces case evidence when a score is present even if the first model turn skips the tool", async () => {
@@ -354,4 +353,17 @@ test("Agent unwraps provider JSON whose object quotes are escaped", async () => 
   const result = await runAgent({ message: "应用数学适合申请什么专业？", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: false });
   assert.equal(result.answer, "已根据应用数学背景完成分析。");
   assert.doesNotMatch(result.answer, /\\"answer\\"/);
+});
+
+test("Agent keeps real case cards when provider JSON is truncated", async () => {
+  let calls = 0;
+  const fakeModel = async () => {
+    calls += 1;
+    if (calls === 1) return { output_text: JSON.stringify({ answer: "先分析。", needsClarification: false, clarificationQuestions: [], recommendations: [] }) };
+    return { output_text: '{"answer":"已结合西浦历史案例分析。","needsClarification":false,"clarificationQuestions":[],"recommendations":[{"candidateKey":"case_' };
+  };
+  const result = await runAgent({ message: "我是应用数学，均分85，想申请英国", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: false });
+  assert.equal(result.answer, "已结合西浦历史案例分析。");
+  assert.equal(result.recommendations.length, 1);
+  assert.equal(result.recommendations[0].caseIds[0], "XPU-TEST-1");
 });
