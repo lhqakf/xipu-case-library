@@ -173,6 +173,10 @@
     return Number.isFinite(parsed) ? parsed : fallback;
   }
 
+  function activeMatchYears(scores = state.matchScores) {
+    return ["y3", "y2", "y1"].filter((year) => Number.isFinite(scores[year]));
+  }
+
   function getFilteredCases() {
     const query = state.query.trim().toLocaleLowerCase("zh-CN");
     const aiCaseIds = new Set(state.aiCaseIds);
@@ -188,7 +192,7 @@
       const average = numeric(caseItem.scores.average, null);
       if (state.minScore > 50 && (average === null || average < state.minScore)) return false;
       if (state.completeScores && !(caseItem.scores.y1 && caseItem.scores.y2 && caseItem.scores.y3)) return false;
-      if (state.scoreMatch && [caseItem.scores.y1, caseItem.scores.y2, caseItem.scores.y3].some((value) => numeric(value, null) === null)) return false;
+      if (state.scoreMatch && activeMatchYears().some((year) => numeric(caseItem.scores[year], null) === null)) return false;
       if (query) {
         const haystack = [
           caseItem.id,
@@ -206,13 +210,9 @@
     filtered.sort((a, b) => {
       if (state.scoreMatch) {
         const target = state.matchScores;
-        const targetAverage = (target.y1 + target.y2 + target.y3) / 3;
+        const matchYears = activeMatchYears(target);
         const differences = (item) => {
-          const y1 = numeric(item.scores.y1, 0);
-          const y2 = numeric(item.scores.y2, 0);
-          const y3 = numeric(item.scores.y3, 0);
-          const average = numeric(item.scores.average, (y1 + y2 + y3) / 3);
-          return [Math.abs(average - targetAverage), Math.abs(y3 - target.y3), Math.abs(y2 - target.y2), Math.abs(y1 - target.y1)];
+          return matchYears.map((year) => Math.abs(numeric(item.scores[year], target[year]) - target[year]));
         };
         const aDiff = differences(a);
         const bDiff = differences(b);
@@ -523,7 +523,11 @@
     if (state.result) entries.push(["result", state.result]);
     if (state.minScore > 50) entries.push(["minScore", `均分 ≥ ${state.minScore}`]);
     if (state.completeScores) entries.push(["completeScores", "三年成绩完整"]);
-    if (state.scoreMatch) entries.push(["scoreMatch", `成绩匹配：大一 ${state.matchScores.y1}、大二 ${state.matchScores.y2}、大三 ${state.matchScores.y3}`]);
+    if (state.scoreMatch) {
+      const labels = { y1: "大一", y2: "大二", y3: "大三" };
+      const summary = activeMatchYears().slice().reverse().map((year) => `${labels[year]} ${state.matchScores[year]}`).join("、");
+      entries.push(["scoreMatch", `成绩匹配：${summary}`]);
+    }
     return entries;
   }
 
@@ -662,18 +666,22 @@
   elements.clearSearch.addEventListener("click", () => { elements.search.value = ""; state.query = ""; render(); elements.search.focus(); });
   function updateMatchAverage() {
     const values = [elements.matchY1, elements.matchY2, elements.matchY3].map((input) => Number.parseFloat(input.value));
-    const complete = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
-    elements.matchAverage.textContent = complete ? `均分 ${Math.round((values[0] + values[1] + values[2]) / 3)}` : "均分 --";
-    elements.matchAverage.classList.toggle("has-value", complete);
+    const validValues = values.filter((value) => Number.isFinite(value) && value >= 0 && value <= 100);
+    const hasInvalidValue = values.some((value, index) => elements[["matchY1", "matchY2", "matchY3"][index]].value.trim() && !validValues.includes(value));
+    const hasValue = validValues.length > 0 && !hasInvalidValue;
+    elements.matchAverage.textContent = hasValue ? `均分 ${Math.round(validValues.reduce((sum, value) => sum + value, 0) / validValues.length)}` : "均分 --";
+    elements.matchAverage.classList.toggle("has-value", hasValue);
   }
   [elements.matchY1, elements.matchY2, elements.matchY3].forEach((input) => input.addEventListener("input", updateMatchAverage));
   elements.matchButton.addEventListener("click", () => {
     const inputs = [elements.matchY1, elements.matchY2, elements.matchY3];
     const values = inputs.map((input) => Number.parseFloat(input.value));
-    const valid = values.every((value) => Number.isFinite(value) && value >= 0 && value <= 100);
-    inputs.forEach((input, index) => input.classList.toggle("invalid", !Number.isFinite(values[index]) || values[index] < 0 || values[index] > 100));
-    if (!valid) { inputs.find((input) => input.classList.contains("invalid"))?.focus(); return; }
-    state.matchScores = { y1: values[0], y2: values[1], y3: values[2] };
+    const filled = inputs.map((input) => input.value.trim() !== "");
+    const valid = values.map((value, index) => !filled[index] || (Number.isFinite(value) && value >= 0 && value <= 100));
+    inputs.forEach((input, index) => input.classList.toggle("invalid", !valid[index]));
+    if (!filled.some(Boolean)) { inputs[0].classList.add("invalid"); inputs[0].focus(); return; }
+    if (valid.some((value) => !value)) { inputs.find((input) => input.classList.contains("invalid"))?.focus(); return; }
+    state.matchScores = { y1: filled[0] ? values[0] : null, y2: filled[1] ? values[1] : null, y3: filled[2] ? values[2] : null };
     state.scoreMatch = true;
     state.visible = 24;
     render();

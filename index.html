@@ -55,13 +55,13 @@
           <input id="searchInput" type="search" placeholder="搜索院校、项目或本科专业" autocomplete="off">
           <button id="clearSearch" class="clear-search" type="button" title="清空搜索" aria-label="清空搜索">×</button>
         </label>
-        <div class="score-match-box" aria-label="三年成绩匹配">
+        <div class="score-match-box" aria-label="分学年成绩匹配">
           <span class="score-match-label">输入成绩：</span>
           <input id="matchY1" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大一" aria-label="大一成绩">
           <input id="matchY2" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大二" aria-label="大二成绩">
           <input id="matchY3" type="number" min="0" max="100" step="0.1" inputmode="decimal" placeholder="大三" aria-label="大三成绩">
           <button id="matchScores" type="button">成绩匹配</button>
-          <output id="matchAverage" aria-label="三年平均成绩">均分 --</output>
+          <output id="matchAverage" aria-label="已填写成绩平均分">均分 --</output>
         </div>
         <button id="mobileFilterButton" class="filter-trigger" type="button">筛选 <span id="activeFilterCount">0</span></button>
       </div>
@@ -200,6 +200,6 @@
   <script src="data.js?v=20260819-18"></script>
   <script src="requirements.js?v=20260820-4"></script>
   <script src="config.js?v=20260824-7"></script>
-  <script src="app.js?v=20261007-1"></script>
+  <script src="app.js?v=20261007-2"></script>
 </body>
 </html>
