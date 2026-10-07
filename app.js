@@ -542,13 +542,7 @@
       const labels = { y1: "大一", y2: "大二", y3: "大三" };
       const matchYears = activeMatchYears();
       const summary = matchYears.slice().reverse().map((year) => `${labels[year]} ${state.matchScores[year]}`).join("、");
-      const targetAverage = Math.round(targetMatchAverage());
-      const onlyHongKongAndSingapore = state.countries.length > 0
-        && state.countries.every((country) => ["香港", "新加坡"].includes(country));
-      const rule = onlyHongKongAndSingapore
-        ? `；港新均分相差≤5，按均分→大三→大二→大一排序（目标 ${targetAverage}）`
-        : "";
-      entries.push(["scoreMatch", `成绩匹配：${summary}${rule}`]);
+      entries.push(["scoreMatch", `成绩匹配：${summary}`]);
     }
     return entries;
   }
