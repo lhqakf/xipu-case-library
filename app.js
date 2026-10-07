@@ -77,7 +77,6 @@
     aiSummaryText: $("#aiSummaryText"),
     aiTierGrid: $("#aiTierGrid"),
     aiAgentSources: $("#aiAgentSources"),
-    aiAnalysisTitle: $("#aiAnalysisTitle"),
     aiDisclaimer: $("#aiDisclaimer"),
   };
 
@@ -264,7 +263,7 @@
         ${candidate.count ? `<span>${escapeHtml(candidate.count)} 条相似记录</span>` : ""}
       </div>
       <div class="ai-recommendation-insight">
-        <p><strong>Agent分析</strong>${escapeHtml(candidate.fitSummary || "暂未生成个性化分析。")}</p>
+        <p><strong>AI分析</strong>${escapeHtml(candidate.fitSummary || "暂未生成个性化分析。")}</p>
         ${Array.isArray(candidate.tradeoffs) && candidate.tradeoffs.length ? `<p><strong>需要注意</strong>${escapeHtml(candidate.tradeoffs.join("；"))}</p>` : ""}
         ${candidate.officialProgramUrl ? `<p><strong>项目官网</strong><a href="${escapeHtml(candidate.officialProgramUrl)}" target="_blank" rel="noopener noreferrer">查看官方项目页面</a></p>` : ""}
         ${sourceMarkup}
@@ -354,7 +353,6 @@
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
     const hasRecommendations = recommendations.length > 0;
     elements.aiTierGrid.hidden = !hasRecommendations;
-    if (elements.aiAnalysisTitle) elements.aiAnalysisTitle.textContent = hasRecommendations ? "GPT建议与西浦案例证据" : "AI回答";
     if (elements.aiDisclaimer) elements.aiDisclaimer.hidden = !hasRecommendations;
     const tierRecommendations = { challenge: [], match: [], safe: [] };
     recommendations.forEach((candidate) => {
@@ -761,7 +759,6 @@
   elements.caseModeButton.addEventListener("click", showAllCases);
   elements.aiModeButton.addEventListener("click", () => { setAppMode("ai"); window.scrollTo({ top: 0, behavior: "smooth" }); });
   elements.aiAnalyzeButton.addEventListener("click", renderAiAnalysis);
-  $("#aiEditProfile").addEventListener("click", () => { elements.aiProfileInput.focus(); elements.aiProfileInput.scrollIntoView({ behavior: "smooth", block: "center" }); });
   elements.aiProfileInput.addEventListener("keydown", (event) => { if ((event.ctrlKey || event.metaKey) && event.key === "Enter") renderAiAnalysis(); });
   elements.aiTierGrid.addEventListener("click", (event) => {
     const button = event.target.closest("[data-ai-ids]");
