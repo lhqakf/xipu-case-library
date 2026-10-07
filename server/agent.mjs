@@ -19,12 +19,15 @@ const agentResponseSchema = {
         properties: {
           candidateKey: { type: "string" },
           fitScore: { type: "number" },
+          courseOverview: { type: "string" },
+          admissionRequirements: { type: "string" },
+          officialProgramUrl: { type: ["string", "null"] },
           fitSummary: { type: "string" },
           tradeoffs: { type: "array", items: { type: "string" } },
           evidenceCaseIds: { type: "array", items: { type: "string" } },
           sourceUrls: { type: "array", items: { type: "string" } },
         },
-        required: ["candidateKey", "fitScore", "fitSummary", "tradeoffs", "evidenceCaseIds", "sourceUrls"],
+        required: ["candidateKey", "fitScore", "courseOverview", "admissionRequirements", "officialProgramUrl", "fitSummary", "tradeoffs", "evidenceCaseIds", "sourceUrls"],
       },
     },
   },
@@ -35,14 +38,16 @@ const agentSystemPrompt = `你是西浦案例库 V4 Agent。你可以像普通 C
 
 工具选择规则：
 1. 用户明确提供带数值的均分、平均分、成绩、分数、GPA 或绩点时，默认必须调用 search_xipu_cases。最终回答仍然要正常回答用户的问题，并把西浦真实历史案例作为单独证据补充；案例不能替代 AI 分析。用户询问西浦历史录取案例、相似背景、某校以前是否有人拿到 offer 时，也调用 search_xipu_cases。
-2. 用户询问大学官网、项目课程、申请要求、数学基础、编程量、课程难度或最新项目信息时，调用 web_search。优先大学官方域名，不要把中介、博客或排名网站当作课程事实。
-3. 一个问题同时涉及历史录取可能性和项目课程适配度时，可以连续调用两个工具。必须根据上一轮工具结果决定是否需要下一轮，不要假设固定调用顺序。
+2. 用户要求选校推荐时，先调用 search_xipu_cases。拿到候选项目后，必须调用 web_search 核验准备最终推荐的每个项目；搜索该项目的官方课程页面和官方入学要求页面，再生成最终推荐。优先大学官方域名，不要把中介、博客或排名网站当作课程事实。
+3. 用户单独询问大学官网、项目课程、申请要求、数学基础、编程量、课程难度或最新项目信息时，也调用 web_search。
 4. 常识解释、概念解释或不需要案例和最新官网事实的问题，可以不调用工具。
 5. 信息不足时可以主动追问；不要为了凑工具调用而编造条件。
 
 事实约束：
 - search_xipu_cases 返回的案例才是可引用的西浦案例。不得编造案例、均分、录取结果、项目或排名。
 - web_search 的课程和申请要求必须有官方页面支持。找不到官方证据时明确说明无法确认。
+- courseOverview 只概括官方页面明确列出的培养方向、核心课程或学习内容；admissionRequirements 只概括官方页面明确列出的学术背景、成绩、语言或其他入学要求。没有官方证据时统一写“官网信息待核实”，不得凭模型常识补写。
+- officialProgramUrl 必须是对应候选项目的大学官方页面，并同时放入该推荐的 sourceUrls。每个最终推荐都必须提供对应项目的官方来源；不要把学校首页或其他项目页面当作该项目来源。
 - 城市不是当前案例库的独立字段时，必须说明这一限制，不得假装完成城市精确筛选。
 - 最终推荐中的 candidateKey、university、program 和 evidenceCaseIds 必须来自工具返回结果。
 - 最终回答要区分历史案例证据、官方页面事实和一般性建议，不把历史案例当作录取概率。
@@ -216,6 +221,11 @@ function sanitizeRecommendation(item, caseRegistry, sourceRegistry) {
   const sourceUrls = Array.isArray(item.sourceUrls)
     ? item.sourceUrls.map(normalizedUrl).filter((url) => url && sourceRegistry.has(url)).slice(0, 5)
     : [];
+  const requestedOfficialProgramUrl = normalizedUrl(item?.officialProgramUrl);
+  const officialProgramUrl = requestedOfficialProgramUrl && sourceRegistry.has(requestedOfficialProgramUrl)
+    ? requestedOfficialProgramUrl
+    : sourceUrls[0] || "";
+  const hasOfficialEvidence = Boolean(officialProgramUrl || sourceUrls.length);
   const fitScore = Number(item.fitScore);
   return {
     candidateKey: candidate.candidateKey,
@@ -229,6 +239,13 @@ function sanitizeRecommendation(item, caseRegistry, sourceRegistry) {
     caseIds: candidate.caseIds,
     sampleCases: candidate.sampleCases,
     officialUrl: candidate.officialUrl,
+    officialProgramUrl: officialProgramUrl || null,
+    courseOverview: hasOfficialEvidence
+      ? boundedText(item.courseOverview, 900) || "官网信息待核实"
+      : "官网信息待核实",
+    admissionRequirements: hasOfficialEvidence
+      ? boundedText(item.admissionRequirements, 900) || "官网信息待核实"
+      : "官网信息待核实",
     fitScore: Number.isFinite(fitScore) ? Math.max(0, Math.min(100, fitScore)) : null,
     fitSummary: boundedText(item.fitSummary, 800) || "暂未生成个性化匹配说明。",
     tradeoffs: boundedList(item.tradeoffs, 5, 240),
@@ -273,6 +290,7 @@ export async function runAgent({
   let turn = 0;
   let toolCallCount = 0;
   let scoreSearchAttempted = false;
+  let officialVerificationRequested = false;
 
   while (turn < Math.max(1, Math.min(8, maxTurns))) {
     turn += 1;
@@ -335,6 +353,12 @@ export async function runAgent({
         input.push({ role: "system", content: [{ type: "input_text", text: "用户明确提供了分数。请在正常回答用户问题的同时，结合刚才的西浦真实案例结果补充案例证据；不要只返回案例，也不要把案例当作录取保证。" }] });
         continue;
       }
+      if (caseRegistry.size && allowWebSearch && !usedTools.has("web_search") && !officialVerificationRequested) {
+        officialVerificationRequested = true;
+        input.push(...(Array.isArray(response?.output) ? response.output : []));
+        input.push({ role: "system", content: [{ type: "input_text", text: "已经取得真实案例候选。现在必须使用 web_search 查询你准备最终推荐的每个项目的大学官方课程页面和官方入学要求页面，然后才能给出最终推荐。每条推荐填写 courseOverview、admissionRequirements、officialProgramUrl 和 sourceUrls；找不到官方证据的内容写‘官网信息待核实’，不得凭常识补写。" }] });
+        continue;
+      }
       const rawAnswer = outputText(response);
       if (!rawAnswer) return fallbackAgentResult("模型没有返回可显示的回答。", usedTools, [...sourceRegistry.values()], turn, toolCallCount, allowWebSearch);
       let parsed;
@@ -347,6 +371,9 @@ export async function runAgent({
         recommendations = [...caseRegistry.values()].slice(0, MAX_RECOMMENDATIONS).map((candidate) => ({
           ...candidate,
           fitScore: null,
+          officialProgramUrl: null,
+          courseOverview: "官网信息待核实",
+          admissionRequirements: "官网信息待核实",
           fitSummary: "这是根据你的分数和问题从西浦真实历史案例中检索到的相关记录。它用于提供参考，不代表录取概率。",
           tradeoffs: [],
           evidenceCaseIds: candidate.caseIds.slice(0, 8),

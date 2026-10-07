@@ -121,6 +121,86 @@ test("Agent executes a function tool and validates the final candidate", async (
   assert.equal(result.meta.toolCallCount, 1);
 });
 
+test("Agent requires official web verification after case recommendations", async () => {
+  const candidate = searchXipuCases({
+    query: "应用数学76分英国数据科学",
+    major: "应用数学",
+    average: 76,
+    country: "英国",
+    city: null,
+    targetDirection: "数据科学",
+    learningInterest: [],
+    qsRanking: null,
+    preferences: [],
+    limit: 3,
+  }, fixture).candidates[0];
+  const officialUrl = "https://www.test.ac.uk/data-science";
+  let calls = 0;
+  const fakeModel = async () => {
+    calls += 1;
+    if (calls === 1) {
+      return {
+        output: [{
+          type: "function_call",
+          call_id: "call_case_search",
+          name: "search_xipu_cases",
+          arguments: JSON.stringify({
+            query: "应用数学76分英国数据科学",
+            major: "应用数学",
+            average: 76,
+            country: "英国",
+            city: null,
+            targetDirection: "数据科学",
+            learningInterest: [],
+            qsRanking: null,
+            preferences: [],
+            limit: 3,
+          }),
+        }],
+      };
+    }
+    if (calls === 2) {
+      return {
+        output_text: JSON.stringify({
+          answer: "根据案例推荐该项目。",
+          needsClarification: false,
+          clarificationQuestions: [],
+          recommendations: [],
+        }),
+      };
+    }
+    const payload = JSON.stringify({
+      answer: "已结合案例和官网完成核验。",
+      needsClarification: false,
+      clarificationQuestions: [],
+      recommendations: [{
+        candidateKey: candidate.candidateKey,
+        fitScore: 86,
+        courseOverview: "核心内容包括数据分析与机器学习。",
+        admissionRequirements: "要求定量学科背景并满足英语要求。",
+        officialProgramUrl: officialUrl,
+        fitSummary: "数学背景与课程方向相关。",
+        tradeoffs: [],
+        evidenceCaseIds: ["XPU-TEST-1"],
+        sourceUrls: [officialUrl],
+      }],
+    });
+    return {
+      output: [
+        { type: "web_search_call", action: { sources: [{ url: officialUrl, title: "Data Science MSc" }] } },
+        { type: "message", content: [{ type: "output_text", text: payload }] },
+      ],
+    };
+  };
+
+  const result = await runAgent({ message: "我应用数学76分，想申请英国数据科学", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: true });
+  assert.equal(calls, 3);
+  assert.deepEqual(result.usedTools, ["search_xipu_cases", "web_search"]);
+  assert.equal(result.recommendations[0].officialProgramUrl, officialUrl);
+  assert.match(result.recommendations[0].courseOverview, /机器学习/);
+  assert.match(result.recommendations[0].admissionRequirements, /定量学科/);
+});
+
 test("Agent forces case evidence when a score is present even if the first model turn skips the tool", async () => {
   let calls = 0;
   const fakeModel = async () => {
