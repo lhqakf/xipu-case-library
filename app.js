@@ -264,8 +264,6 @@
         ${candidate.count ? `<span>${escapeHtml(candidate.count)} 条相似记录</span>` : ""}
       </div>
       <div class="ai-recommendation-insight">
-        <p><strong>课程内容</strong>${escapeHtml(candidate.courseOverview || "官网信息待核实")}</p>
-        <p><strong>录取要求</strong>${escapeHtml(candidate.admissionRequirements || "官网信息待核实")}</p>
         <p><strong>Agent分析</strong>${escapeHtml(candidate.fitSummary || "暂未生成个性化分析。")}</p>
         ${Array.isArray(candidate.tradeoffs) && candidate.tradeoffs.length ? `<p><strong>需要注意</strong>${escapeHtml(candidate.tradeoffs.join("；"))}</p>` : ""}
         ${candidate.officialProgramUrl ? `<p><strong>项目官网</strong><a href="${escapeHtml(candidate.officialProgramUrl)}" target="_blank" rel="noopener noreferrer">查看官方项目页面</a></p>` : ""}
