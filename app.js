@@ -290,7 +290,17 @@
 
   function parseEmbeddedAgentJson(value) {
     const source = String(value || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-    try { return JSON.parse(source); } catch {
+    const parseAndUnwrap = (candidate) => {
+      let parsed = JSON.parse(candidate);
+      if (typeof parsed === "string" && /^\s*\{/.test(parsed)) parsed = JSON.parse(parsed);
+      return parsed;
+    };
+    const candidates = [source];
+    if (/\\"/.test(source)) candidates.push(source.replace(/\\"/g, '"'));
+    for (const candidate of candidates) {
+      try { return parseAndUnwrap(candidate); } catch { /* Try repaired formats below. */ }
+    }
+    {
       let repaired = "";
       let inString = false;
       let escaped = false;
@@ -315,7 +325,12 @@
         else if (inString && character === "\t") repaired += "\\t";
         else repaired += character;
       }
-      try { return JSON.parse(repaired); } catch { return null; }
+      const repairedCandidates = [repaired];
+      if (/\\"/.test(repaired)) repairedCandidates.push(repaired.replace(/\\"/g, '"'));
+      for (const candidate of repairedCandidates) {
+        try { return parseAndUnwrap(candidate); } catch { /* Try the next candidate. */ }
+      }
+      return null;
     }
   }
 

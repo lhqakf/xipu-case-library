@@ -304,3 +304,16 @@ test("Agent repairs provider JSON with an unescaped newline and keeps recommenda
   assert.equal(result.answer, "第一行\n第二行");
   assert.equal(result.recommendations.length, 1);
 });
+
+test("Agent unwraps provider JSON whose object quotes are escaped", async () => {
+  const payload = JSON.stringify({
+    answer: "已根据应用数学背景完成分析。",
+    needsClarification: false,
+    clarificationQuestions: [],
+    recommendations: [],
+  });
+  const fakeModel = async () => ({ output_text: payload.replaceAll('"', '\\"') });
+  const result = await runAgent({ message: "应用数学适合申请什么专业？", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: false });
+  assert.equal(result.answer, "已根据应用数学背景完成分析。");
+  assert.doesNotMatch(result.answer, /\\"answer\\"/);
+});

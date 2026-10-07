@@ -66,13 +66,26 @@ function boundedList(value, limit = 8, maxLength = 700) {
 
 function parseJsonText(value) {
   const cleaned = String(value || "").trim().replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/, "");
-  try { return JSON.parse(cleaned); }
-  catch {
-    const start = cleaned.indexOf("{");
-    const end = cleaned.lastIndexOf("}");
-    if (start >= 0 && end > start) return JSON.parse(cleaned.slice(start, end + 1));
-    throw new Error(`Agent returned invalid JSON: ${cleaned.slice(0, 300)}`);
+  const parseAndUnwrap = (candidate) => {
+    let parsed = JSON.parse(candidate);
+    if (typeof parsed === "string" && /^\s*\{/.test(parsed)) parsed = JSON.parse(parsed);
+    return parsed;
+  };
+  const candidates = [cleaned];
+  const start = cleaned.indexOf("{");
+  const end = cleaned.lastIndexOf("}");
+  if (start >= 0 && end > start) candidates.push(cleaned.slice(start, end + 1));
+  if (/\\"/.test(cleaned)) {
+    const unescapedQuotes = cleaned.replace(/\\"/g, '"');
+    candidates.push(unescapedQuotes);
+    const objectStart = unescapedQuotes.indexOf("{");
+    const objectEnd = unescapedQuotes.lastIndexOf("}");
+    if (objectStart >= 0 && objectEnd > objectStart) candidates.push(unescapedQuotes.slice(objectStart, objectEnd + 1));
   }
+  for (const candidate of [...new Set(candidates)]) {
+    try { return parseAndUnwrap(candidate); } catch { /* Try the next provider format. */ }
+  }
+  throw new Error(`Agent returned invalid JSON: ${cleaned.slice(0, 300)}`);
 }
 
 function repairJsonControlCharacters(value) {
