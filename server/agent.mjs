@@ -145,6 +145,11 @@ function hasScoreSignal(message) {
   return scoreLabel.test(text) || gpa.test(text) || scoreWithUnit.test(text) || yearScore.test(text);
 }
 
+function isGeneralOfficialInfoQuery(message) {
+  const text = String(message || "");
+  return /申请费|application\s*fee|雅思|IELTS|托福|TOEFL|语言要求|英语要求|conditional\s*offer|\bcon\b|几等学位|学位等级|一等学位|二等一|二等二|2\s*[:：]\s*1|2\s*[:：]\s*2|截止日期|deadline|入学要求|录取要求/i.test(text);
+}
+
 function normalizeParsedAgentPayload(parsed) {
   if (!parsed || typeof parsed !== "object") return {};
   let payload = parsed;
@@ -220,8 +225,9 @@ function isWebSearchUnsupported(error) {
   return /web[_ -]?search|hosted tool|tool(s)? unsupported|unknown parameter|not support|unsupported model/i.test(String(error?.message || error));
 }
 
-function toolDefinitions(webSearchEnabled, webSearchContextSize) {
-  const definitions = [searchXipuCasesDefinition];
+function toolDefinitions(caseSearchEnabled, webSearchEnabled, webSearchContextSize) {
+  const definitions = [];
+  if (caseSearchEnabled) definitions.push(searchXipuCasesDefinition);
   if (webSearchEnabled) definitions.push({ type: "web_search", search_context_size: webSearchContextSize });
   return definitions;
 }
@@ -305,18 +311,22 @@ export async function runAgent({
   let toolCallCount = 0;
   let scoreSearchAttempted = false;
   let officialVerificationRequested = false;
+  const allowCaseSearch = !(isGeneralOfficialInfoQuery(message) && !hasScoreSignal(message));
 
   while (turn < Math.max(1, Math.min(8, maxTurns))) {
     turn += 1;
+    const tools = toolDefinitions(allowCaseSearch, allowWebSearch, webSearchContextSize);
     const request = {
       model,
-      tools: toolDefinitions(allowWebSearch, webSearchContextSize),
-      tool_choice: "auto",
-      parallel_tool_calls: false,
       input,
       text: { format: { type: "json_schema", name: "xipu_v4_agent_response", strict: true, schema: agentResponseSchema } },
       max_output_tokens: 2400,
     };
+    if (tools.length) {
+      request.tools = tools;
+      request.tool_choice = "auto";
+      request.parallel_tool_calls = false;
+    }
     if (allowWebSearch) request.include = ["web_search_call.action.sources"];
     try {
       response = await requestModelResponse(request);

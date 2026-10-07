@@ -253,6 +253,7 @@ h1 { margin: 0; font-size: 34px; line-height: 1.2; }
 .ai-profile-tag { padding: 6px 9px; border-radius: 4px; color: #425056; background: #eef2f1; font-size: 12px; }
 .ai-summary-text { margin: 15px 0 20px; color: #4d595f; line-height: 1.7; }
 .ai-tier-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: start; }
+.ai-tier-grid[hidden], .ai-disclaimer[hidden] { display: none !important; }
 .ai-tier { min-width: 0; border: 1px solid var(--line); border-radius: 7px; overflow: hidden; }
 .ai-tier-head { padding: 13px 14px; border-bottom: 1px solid var(--line); background: #f7f8f7; }
 .ai-tier-head strong { display: block; }

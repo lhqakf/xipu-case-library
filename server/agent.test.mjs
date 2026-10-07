@@ -250,6 +250,25 @@ test("Agent does not force cases when a user only asks about score requirements"
   assert.deepEqual(result.recommendations, []);
 });
 
+test("Agent does not expose the case tool for general fee and language questions without a score", async () => {
+  let availableTools = [];
+  const fakeModel = async (request) => {
+    availableTools = (request.tools || []).map((tool) => tool.name || tool.type);
+    return {
+      output_text: JSON.stringify({
+        answer: "这类政策信息应以大学官网最新说明为准。",
+        needsClarification: false,
+        clarificationQuestions: [],
+        recommendations: [],
+      }),
+    };
+  };
+  const result = await runAgent({ message: "英国哪些学校不要申请费，雅思要求和 con 几等学位？", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: true });
+  assert.deepEqual(availableTools, ["web_search"]);
+  assert.ok(!result.usedTools.includes("search_xipu_cases"));
+  assert.deepEqual(result.recommendations, []);
+});
+
 test("Agent treats an explicit GPA as a case-search signal", async () => {
   let calls = 0;
   const fakeModel = async () => {

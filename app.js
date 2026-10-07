@@ -77,6 +77,8 @@
     aiSummaryText: $("#aiSummaryText"),
     aiTierGrid: $("#aiTierGrid"),
     aiAgentSources: $("#aiAgentSources"),
+    aiAnalysisTitle: $("#aiAnalysisTitle"),
+    aiDisclaimer: $("#aiDisclaimer"),
   };
 
   function escapeHtml(value) {
@@ -352,17 +354,20 @@
     elements.aiSummaryText.classList.remove("ai-error-message");
     elements.aiSummaryText.textContent = result.answer || "Agent 已完成分析。";
     const recommendations = Array.isArray(result.recommendations) ? result.recommendations : [];
-    elements.aiTierGrid.hidden = !recommendations.length;
+    const hasRecommendations = recommendations.length > 0;
+    elements.aiTierGrid.hidden = !hasRecommendations;
+    if (elements.aiAnalysisTitle) elements.aiAnalysisTitle.textContent = hasRecommendations ? "GPT建议与西浦案例证据" : "AI回答";
+    if (elements.aiDisclaimer) elements.aiDisclaimer.hidden = !hasRecommendations;
     const tierRecommendations = { challenge: [], match: [], safe: [] };
     recommendations.forEach((candidate) => {
       const tier = ["challenge", "match", "safe"].includes(candidate?.tier) ? candidate.tier : "match";
       tierRecommendations[tier].push(candidate);
     });
     const tierConfig = [["challenge", "冲刺", "历史案例要求相对更高"], ["match", "匹配", "与当前背景较为接近"], ["safe", "保底", "历史案例分数相对友好"]];
-    elements.aiTierGrid.innerHTML = tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
+    elements.aiTierGrid.innerHTML = hasRecommendations ? tierConfig.map(([key, title, note]) => `<section class="ai-tier ${key}">
       <div class="ai-tier-head"><strong>${title}</strong><span>${note}</span></div>
       ${tierRecommendations[key].length ? tierRecommendations[key].map(agentRecommendationMarkup).join("") : '<div class="ai-tier-empty">暂无符合当前条件的项目</div>'}
-    </section>`).join("");
+    </section>`).join("") : "";
     renderAgentSources(result.sources);
     elements.aiAnalysis.hidden = false;
     elements.aiAnalysis.scrollIntoView({ behavior: "smooth", block: "start" });
