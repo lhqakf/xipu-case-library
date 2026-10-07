@@ -263,7 +263,7 @@
       <p>${escapeHtml(candidate.program)}</p>
       <div class="ai-recommendation-meta">
         ${candidate.rank !== null ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
-        <span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>
+        <span>历史基准分 ${Math.round(candidate.historicalAverage)}</span>
         <span>${candidate.count} 条相似记录</span>
       </div>
       <div class="ai-recommendation-insight">
@@ -286,7 +286,7 @@
       <p>${escapeHtml(candidate.program || "")}</p>
       <div class="ai-recommendation-meta">
         ${candidate.rank !== null && candidate.rank !== undefined ? `<span>QS ${escapeHtml(candidate.rank)}</span>` : ""}
-        ${candidate.historicalAverage !== null && candidate.historicalAverage !== undefined ? `<span>相近案例均分 ${Math.round(candidate.historicalAverage)}</span>` : ""}
+        ${candidate.historicalAverage !== null && candidate.historicalAverage !== undefined ? `<span>历史基准分 ${Math.round(candidate.historicalAverage)}</span>` : ""}
         ${candidate.count ? `<span>${escapeHtml(candidate.count)} 条相似记录</span>` : ""}
       </div>
       <div class="ai-recommendation-insight">

@@ -9,6 +9,18 @@ const TARGET_GROUPS = [
 
 const MAJOR_ROOTS = ["数学", "计算机", "数据", "电子", "电气", "金融", "经济", "会计", "传媒", "传播", "管理", "建筑", "生物", "化学", "英语"];
 
+const MAJOR_FAMILIES = [
+  ["数学", "统计", "精算"],
+  ["计算机", "软件", "数据", "人工智能", "信息与计算"],
+  ["金融", "经济", "会计", "商科"],
+  ["电子", "电气", "通信", "机器人", "机械"],
+  ["传媒", "传播", "媒体", "广告"],
+  ["建筑", "规划", "土木"],
+  ["生物", "药学", "制药"],
+  ["化学", "材料", "环境"],
+  ["英语", "翻译", "语言"],
+];
+
 export function numeric(value, fallback = null) {
   const parsed = Number.parseFloat(value);
   return Number.isFinite(parsed) ? parsed : fallback;
@@ -74,9 +86,53 @@ function majorRoot(major) {
   return MAJOR_ROOTS.find((root) => text(major).includes(root)) || text(major);
 }
 
+function majorFamily(major) {
+  return MAJOR_FAMILIES.findIndex((family) => family.some((keyword) => text(major).toLocaleLowerCase("zh-CN").includes(keyword.toLocaleLowerCase("zh-CN"))));
+}
+
+function median(values) {
+  const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
+  if (!sorted.length) return null;
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[middle] : (sorted[middle - 1] + sorted[middle]) / 2;
+}
+
+function validScore(value) {
+  const score = numeric(value, null);
+  return score !== null && score >= 0 && score <= 100 ? score : null;
+}
+
+export function effectiveScore(scores, country) {
+  const source = scores || {};
+  const y1 = validScore(source.y1);
+  const y2 = validScore(source.y2);
+  const y3 = validScore(source.y3);
+  const average = validScore(source.average);
+  if (["香港", "新加坡"].includes(country)) {
+    return average ?? ([y1, y2, y3].every(Number.isFinite) ? (y1 + y2 + y3) / 3 : null);
+  }
+  if (country === "英国") {
+    if (y3 !== null && y2 !== null && y1 !== null) return y3 * 0.7 + y2 * 0.2 + y1 * 0.1;
+    if (y3 !== null && y2 !== null) return y3 * 0.8 + y2 * 0.2;
+    if (y3 !== null && y1 !== null) return y3 * 0.9 + y1 * 0.1;
+    if (y3 !== null) return y3;
+    if (y2 !== null && y1 !== null) return y2 * 0.7 + y1 * 0.3;
+  }
+  return average;
+}
+
 export function normalizeProfile(extracted, rawText, data) {
   const filters = data.filters || {};
-  const average = numeric(extracted && extracted.average, null);
+  const yearScores = {
+    y1: validScore(extracted && extracted.y1),
+    y2: validScore(extracted && extracted.y2),
+    y3: validScore(extracted && extracted.y3),
+  };
+  const suppliedAverage = validScore(extracted && extracted.average);
+  const completeYearAverage = [yearScores.y1, yearScores.y2, yearScores.y3].every(Number.isFinite)
+    ? (yearScores.y1 + yearScores.y2 + yearScores.y3) / 3
+    : null;
+  const average = suppliedAverage ?? completeYearAverage;
   const qsRanking = numeric(extracted && extracted.qsRanking, null);
   const intake = text(extracted && extracted.intake);
   const studyIntentValues = new Set(["applying", "exploring", "future_interest", "career_only", "unclear"]);
@@ -125,6 +181,7 @@ export function normalizeProfile(extracted, rawText, data) {
     isMajorTransition: transition.isMajorTransition,
     major,
     average: average !== null && average >= 0 && average <= 100 ? average : null,
+    ...yearScores,
     country,
     qsRanking: qsRanking !== null && qsRanking > 0 ? qsRanking : null,
     intake,
@@ -153,13 +210,18 @@ export function getAiCandidates(data, profile) {
     if (profile.country && app.country !== profile.country) return false;
     const rank = numeric(app.rank, null);
     if (profile.qsRanking && (rank === null || rank > profile.qsRanking)) return false;
-    return numeric(item.scores && item.scores.average, null) !== null;
+    return effectiveScore(item.scores, app.country) !== null;
   });
 
   if (profile.major) {
     const root = majorRoot(profile.major);
-    const similarMajorCases = cases.filter((item) => item.major === profile.major || (root.length >= 2 && String(item.major || "").includes(root)));
-    if (similarMajorCases.length >= 9) cases = similarMajorCases;
+    const family = majorFamily(profile.major);
+    const exactCases = cases.filter((item) => item.major === profile.major);
+    const familyCases = cases.filter((item) => item.major === profile.major
+      || (family >= 0 && majorFamily(item.major) === family)
+      || (root.length >= 2 && String(item.major || "").includes(root)));
+    if (exactCases.length >= 3) cases = exactCases;
+    else if (familyCases.length >= 3) cases = familyCases;
   }
 
   const grouped = new Map();
@@ -167,7 +229,7 @@ export function getAiCandidates(data, profile) {
     const app = item.application;
     const key = String(app.university) + "|" + String(app.program);
     const current = grouped.get(key) || { item, scores: [], caseIds: [], samples: [], count: 0 };
-    current.scores.push(numeric(item.scores.average, 0));
+    current.scores.push(effectiveScore(item.scores, app.country));
     current.caseIds.push(String(item.id));
     if (current.samples.length < 3) {
       current.samples.push({
@@ -187,9 +249,9 @@ export function getAiCandidates(data, profile) {
 
   const candidates = [...grouped.values()].map((entry) => {
     const app = entry.item.application;
-    const historicalAverage = entry.scores.reduce((sum, value) => sum + value, 0) / entry.scores.length;
+    const historicalAverage = median(entry.scores);
     const rank = numeric(app.rank, null);
-    const applicantAverage = profile.average === null ? 70 : profile.average;
+    const applicantAverage = effectiveScore(profile, app.country) ?? profile.average ?? 70;
     const searchable = `${app.program} ${entry.item.major || ""}`.toLocaleLowerCase("zh-CN");
     const keywordHits = profile.targetKeywords.filter((word) => searchable.includes(word.toLocaleLowerCase("zh-CN"))).length;
     return {
@@ -222,9 +284,9 @@ export function chooseAiTiers(candidates, fitScores = new Map()) {
     return chosen;
   };
   return {
-    challenge: pick((candidate) => candidate.delta > 1.5, 3.5),
-    match: pick((candidate) => candidate.delta >= -2 && candidate.delta <= 2, 0),
-    safe: pick((candidate) => candidate.delta < -1.5, -4),
+    challenge: pick((candidate) => candidate.delta >= 3.5, 4),
+    match: pick((candidate) => candidate.delta > -3.5 && candidate.delta < 3.5, 0),
+    safe: pick((candidate) => candidate.delta <= -3.5, -4),
   };
 }
 

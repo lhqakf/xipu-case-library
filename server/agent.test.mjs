@@ -78,6 +78,45 @@ test("case tier uses only historical average and ignores QS rank", () => {
   assert.equal(result.candidates[0].tier, "match");
 });
 
+test("UK tier uses third-year weighted score and same-major median", () => {
+  const ukFixture = {
+    filters: { countries: ["英国"], majors: ["应用数学", "传媒"] },
+    cases: [
+      { id: "UK-1", major: "应用数学", scores: { y1: "60", y2: "65", y3: "80", average: "68" }, application: { country: "英国", university: "UK Test", program: "Data MSc", result: "Offer", degree: "硕士" } },
+      { id: "UK-2", major: "应用数学", scores: { y1: "62", y2: "67", y3: "82", average: "70" }, application: { country: "英国", university: "UK Test", program: "Data MSc", result: "Offer", degree: "硕士" } },
+      { id: "UK-3", major: "应用数学", scores: { y1: "64", y2: "69", y3: "84", average: "72" }, application: { country: "英国", university: "UK Test", program: "Data MSc", result: "Offer", degree: "硕士" } },
+      { id: "UK-OTHER", major: "传媒", scores: { y1: "95", y2: "95", y3: "95", average: "95" }, application: { country: "英国", university: "UK Test", program: "Data MSc", result: "Offer", degree: "硕士" } },
+    ],
+  };
+  const result = searchXipuCases({
+    query: "应用数学，大一60，大二62，大三72，申请英国数据科学",
+    major: "应用数学", average: null, y1: 60, y2: 62, y3: 72,
+    country: "英国", city: null, targetDirection: "数据科学", learningInterest: [], qsRanking: null, preferences: [], limit: 3,
+  }, ukFixture);
+  assert.equal(result.candidates[0].historicalAverage, 77);
+  assert.equal(result.candidates[0].count, 3);
+  assert.equal(result.candidates[0].tier, "challenge");
+});
+
+test("Hong Kong and Singapore tier uses three-year average median", () => {
+  const hkFixture = {
+    filters: { countries: ["香港"], majors: ["应用数学"] },
+    cases: [70, 72, 74].map((average, index) => ({
+      id: `HK-${index + 1}`,
+      major: "应用数学",
+      scores: { y1: String(average - 1), y2: String(average), y3: String(average + 1), average: String(average) },
+      application: { country: "香港", university: "HK Test", program: "Analytics MSc", result: "Offer", degree: "硕士" },
+    })),
+  };
+  const result = searchXipuCases({
+    query: "应用数学，大一65，大二66，大三67，申请香港商业分析",
+    major: "应用数学", average: null, y1: 65, y2: 66, y3: 67,
+    country: "香港", city: null, targetDirection: "商业分析", learningInterest: [], qsRanking: null, preferences: [], limit: 3,
+  }, hkFixture);
+  assert.equal(result.candidates[0].historicalAverage, 72);
+  assert.equal(result.candidates[0].tier, "challenge");
+});
+
 test("Agent executes a function tool and validates the final candidate", async () => {
   const toolResult = searchXipuCases({
     query: "应用数学76分英国案例",

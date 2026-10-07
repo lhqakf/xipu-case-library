@@ -26,6 +26,13 @@ function inferAverage(query) {
   return value !== null && value >= 0 && value <= 100 ? value : null;
 }
 
+function inferYearScore(query, year) {
+  const labels = { y1: "(?:大一|一年级|Y1)", y2: "(?:大二|二年级|Y2)", y3: "(?:大三|三年级|Y3)" };
+  const match = text(query).match(new RegExp(`${labels[year]}\\s*(?:均分|平均分|成绩|分数)?[^0-9]{0,8}(\\d{2,3}(?:\\.\\d+)?)`, "i"));
+  const value = numeric(match?.[1], null);
+  return value !== null && value >= 0 && value <= 100 ? value : null;
+}
+
 function inferKnownValue(query, values) {
   const source = text(query).toLocaleLowerCase("zh-CN");
   return values
@@ -49,9 +56,9 @@ function candidateKey(candidate) {
 }
 
 function recommendationTier(candidate, applicantAverage) {
-  if (!Number.isFinite(applicantAverage)) return "match";
-  if (candidate.delta > 1.5) return "challenge";
-  if (candidate.delta < -1.5) return "safe";
+  if (!Number.isFinite(candidate.delta) || !Number.isFinite(applicantAverage)) return "match";
+  if (candidate.delta >= 3.5) return "challenge";
+  if (candidate.delta <= -3.5) return "safe";
   return "match";
 }
 
@@ -62,6 +69,9 @@ function normalizeToolArguments(argumentsValue, caseData) {
   const major = boundedText(args.major, 120);
   const country = boundedText(args.country, 80) || inferKnownValue(query, filters.countries || []);
   const average = numeric(args.average, null) ?? inferAverage(query);
+  const y1 = numeric(args.y1, null) ?? inferYearScore(query, "y1");
+  const y2 = numeric(args.y2, null) ?? inferYearScore(query, "y2");
+  const y3 = numeric(args.y3, null) ?? inferYearScore(query, "y3");
   const targetDirection = boundedText(args.targetDirection, 180);
   const learningInterest = boundedList(args.learningInterest, 8);
   const preferences = boundedList(args.preferences, 8);
@@ -72,6 +82,9 @@ function normalizeToolArguments(argumentsValue, caseData) {
     isMajorTransition: false,
     major: major || inferKnownValue(query, filters.majors || []),
     average,
+    y1,
+    y2,
+    y3,
     country: country || null,
     qsRanking: qsRanking !== null && qsRanking > 0 ? qsRanking : null,
     intake: null,
@@ -103,6 +116,9 @@ export const searchXipuCasesDefinition = {
       query: { type: "string" },
       major: { type: ["string", "null"] },
       average: { type: ["number", "null"] },
+      y1: { type: ["number", "null"] },
+      y2: { type: ["number", "null"] },
+      y3: { type: ["number", "null"] },
       country: { type: ["string", "null"] },
       city: { type: ["string", "null"] },
       targetDirection: { type: ["string", "null"] },
@@ -111,7 +127,7 @@ export const searchXipuCasesDefinition = {
       preferences: { type: "array", items: { type: "string" } },
       limit: { type: "integer", minimum: 1, maximum: MAX_LIMIT },
     },
-    required: ["query", "major", "average", "country", "city", "targetDirection", "learningInterest", "qsRanking", "preferences", "limit"],
+    required: ["query", "major", "average", "y1", "y2", "y3", "country", "city", "targetDirection", "learningInterest", "qsRanking", "preferences", "limit"],
   },
 };
 
@@ -125,7 +141,7 @@ export function searchXipuCases(argumentsValue, caseData) {
       const key = candidateKey(candidate);
       return {
         ...serializeCandidate(candidate, key, "agent"),
-        tier: recommendationTier(candidate, normalized.profile.average),
+        tier: recommendationTier(candidate, candidate.historicalAverage - candidate.delta),
       };
     });
   const limitations = [];
@@ -138,6 +154,9 @@ export function searchXipuCases(argumentsValue, caseData) {
     appliedFilters: {
       major: normalized.profile.major || null,
       average: normalized.profile.average,
+      y1: normalized.profile.y1,
+      y2: normalized.profile.y2,
+      y3: normalized.profile.y3,
       country: normalized.profile.country || null,
       city: normalized.city || null,
       targetDirection: normalized.targetDirection || null,
