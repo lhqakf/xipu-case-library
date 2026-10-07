@@ -177,6 +177,11 @@
     return ["y3", "y2", "y1"].filter((year) => Number.isFinite(scores[year]));
   }
 
+  function targetMatchAverage(scores = state.matchScores) {
+    const years = activeMatchYears(scores);
+    return years.length ? years.reduce((sum, year) => sum + scores[year], 0) / years.length : null;
+  }
+
   function getFilteredCases() {
     const query = state.query.trim().toLocaleLowerCase("zh-CN");
     const aiCaseIds = new Set(state.aiCaseIds);
@@ -195,6 +200,8 @@
       if (state.scoreMatch) {
         if (activeMatchYears().some((year) => numeric(caseItem.scores[year], null) === null)) return false;
         if (["香港", "新加坡"].includes(application.country) && average === null) return false;
+        if (["香港", "新加坡"].includes(application.country)
+          && Math.abs(average - targetMatchAverage()) > 5) return false;
       }
       if (query) {
         const haystack = [
@@ -214,7 +221,7 @@
       if (state.scoreMatch) {
         const target = state.matchScores;
         const matchYears = activeMatchYears(target);
-        const targetAverage = matchYears.reduce((sum, year) => sum + target[year], 0) / matchYears.length;
+        const targetAverage = targetMatchAverage(target);
         const differences = (item) => {
           const yearDifferences = matchYears.map((year) => Math.abs(numeric(item.scores[year], target[year]) - target[year]));
           if (["香港", "新加坡"].includes(item.application.country)) {
@@ -535,11 +542,11 @@
       const labels = { y1: "大一", y2: "大二", y3: "大三" };
       const matchYears = activeMatchYears();
       const summary = matchYears.slice().reverse().map((year) => `${labels[year]} ${state.matchScores[year]}`).join("、");
-      const targetAverage = Math.round(matchYears.reduce((sum, year) => sum + state.matchScores[year], 0) / matchYears.length);
+      const targetAverage = Math.round(targetMatchAverage());
       const onlyHongKongAndSingapore = state.countries.length > 0
         && state.countries.every((country) => ["香港", "新加坡"].includes(country));
       const rule = onlyHongKongAndSingapore
-        ? `；目标均分 ${targetAverage}，按均分→大三→大二→大一排序`
+        ? `；港新均分相差≤5，按均分→大三→大二→大一排序（目标 ${targetAverage}）`
         : "";
       entries.push(["scoreMatch", `成绩匹配：${summary}${rule}`]);
     }
