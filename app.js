@@ -90,8 +90,13 @@
   }
 
   function aiAnswerMarkup(value) {
-    return escapeHtml(value || "")
-      .replace(/\[([^\]\n]+)\]\((https?:\/\/[^\s)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1</a>')
+    const cleanAnswer = String(value || "")
+      .replace(/\s*\(\s*\[[^\]]+\]\s*\(\s*https?:\/\/[^)]*\)\s*\)/g, "")
+      .replace(/\[([^\]\n]+)\]\s*\(\s*https?:\/\/[^)]*\)/g, "$1")
+      .replace(/https?:\/\/\S+/g, "")
+      .replace(/\s+(?=\d{1,2}\.\s)/g, "\n")
+      .trim();
+    return escapeHtml(cleanAnswer)
       .replace(/\*\*([^*\n]+)\*\*/g, "<strong>$1</strong>")
       .replace(/\n/g, "<br>");
   }
