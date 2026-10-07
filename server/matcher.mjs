@@ -189,7 +189,6 @@ export function getAiCandidates(data, profile) {
     const app = entry.item.application;
     const historicalAverage = entry.scores.reduce((sum, value) => sum + value, 0) / entry.scores.length;
     const rank = numeric(app.rank, null);
-    const rankBonus = rank !== null && rank <= 10 ? 4 : rank !== null && rank <= 25 ? 2.5 : rank !== null && rank <= 50 ? 1.5 : rank !== null && rank <= 100 ? .5 : 0;
     const applicantAverage = profile.average === null ? 70 : profile.average;
     const searchable = `${app.program} ${entry.item.major || ""}`.toLocaleLowerCase("zh-CN");
     const keywordHits = profile.targetKeywords.filter((word) => searchable.includes(word.toLocaleLowerCase("zh-CN"))).length;
@@ -197,7 +196,7 @@ export function getAiCandidates(data, profile) {
       item: entry.item,
       historicalAverage,
       rank,
-      delta: historicalAverage + rankBonus - applicantAverage,
+      delta: historicalAverage - applicantAverage,
       count: entry.count,
       caseIds: entry.caseIds,
       samples: entry.samples,

@@ -59,6 +59,25 @@ test("search_xipu_cases infers a bare percentage score from the query", () => {
   assert.equal(result.appliedFilters.average, 76);
 });
 
+test("case tier uses only historical average and ignores QS rank", () => {
+  const topRankFixture = structuredClone(fixture);
+  topRankFixture.cases[0].application.rank = "2";
+  const result = searchXipuCases({
+    query: "应用数学76分英国案例",
+    major: "应用数学",
+    average: 76,
+    country: "英国",
+    city: null,
+    targetDirection: "数据科学",
+    learningInterest: [],
+    qsRanking: null,
+    preferences: [],
+    limit: 3,
+  }, topRankFixture);
+  assert.equal(result.candidates[0].historicalAverage, 76);
+  assert.equal(result.candidates[0].tier, "match");
+});
+
 test("Agent executes a function tool and validates the final candidate", async () => {
   const toolResult = searchXipuCases({
     query: "应用数学76分英国案例",
