@@ -89,8 +89,8 @@ test("UK tier uses third-year weighted score and same-major median", () => {
     ],
   };
   const result = searchXipuCases({
-    query: "应用数学，大一60，大二62，大三72，申请英国数据科学",
-    major: "应用数学", average: null, y1: 60, y2: 62, y3: 72,
+    query: "应用数学，大一60，大二62，大三76，申请英国数据科学",
+    major: "应用数学", average: null, y1: 60, y2: 62, y3: 76,
     country: "英国", city: null, targetDirection: "数据科学", learningInterest: [], qsRanking: null, preferences: [], limit: 3,
   }, ukFixture);
   assert.equal(result.candidates[0].historicalAverage, 77);
@@ -115,6 +115,35 @@ test("Hong Kong and Singapore tier uses three-year average median", () => {
   }, hkFixture);
   assert.equal(result.candidates[0].historicalAverage, 72);
   assert.equal(result.candidates[0].tier, "challenge");
+});
+
+test("same university program aliases are merged into one tier", () => {
+  const aliasFixture = {
+    filters: { countries: ["美国"], majors: ["应用数学"] },
+    cases: [
+      { id: "ALIAS-1", major: "应用数学", scores: { average: "80" }, application: { country: "美国", university: "康奈尔大学", program: "生物统计与数据科学", result: "Offer", degree: "硕士" } },
+      { id: "ALIAS-2", major: "应用数学", scores: { average: "82" }, application: { country: "美国", university: "康奈尔大学", program: "MS in Biostatistics and Data Science", result: "Offer", degree: "硕士" } },
+    ],
+  };
+  const result = searchXipuCases({
+    query: "应用数学均分78，申请美国数据科学", major: "应用数学", average: 78, y1: null, y2: null, y3: null,
+    country: "美国", city: null, targetDirection: "数据科学", learningInterest: [], qsRanking: null, preferences: [], limit: 8,
+  }, aliasFixture);
+  assert.equal(result.count, 1);
+  assert.equal(result.candidates[0].count, 2);
+  assert.deepEqual(result.candidates[0].caseIds, ["ALIAS-1", "ALIAS-2"]);
+});
+
+test("projects more than six points above the applicant are excluded", () => {
+  const highFixture = {
+    filters: { countries: ["美国"], majors: ["应用数学"] },
+    cases: [{ id: "HIGH-1", major: "应用数学", scores: { average: "83" }, application: { country: "美国", university: "High University", program: "Data Science", result: "Offer", degree: "硕士" } }],
+  };
+  const result = searchXipuCases({
+    query: "应用数学均分76，申请美国数据科学", major: "应用数学", average: 76, y1: null, y2: null, y3: null,
+    country: "美国", city: null, targetDirection: "数据科学", learningInterest: [], qsRanking: null, preferences: [], limit: 8,
+  }, highFixture);
+  assert.equal(result.count, 0);
 });
 
 test("Agent executes a function tool and validates the final candidate", async () => {

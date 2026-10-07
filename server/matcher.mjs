@@ -90,6 +90,26 @@ function majorFamily(major) {
   return MAJOR_FAMILIES.findIndex((family) => family.some((keyword) => text(major).toLocaleLowerCase("zh-CN").includes(keyword.toLocaleLowerCase("zh-CN"))));
 }
 
+function programKey(program) {
+  return text(program)
+    .normalize("NFKC")
+    .toLocaleLowerCase("zh-CN")
+    .replace(/生物统计学?|biological statistics/g, "biostatistics")
+    .replace(/数据科学/g, "data science")
+    .replace(/商业分析|商务分析/g, "business analytics")
+    .replace(/统计学/g, "statistics")
+    .replace(/人工智能/g, "artificial intelligence")
+    .replace(/计算机科学/g, "computer science")
+    .replace(/应用数学/g, "applied mathematics")
+    .replace(/运筹学?/g, "operations research")
+    .replace(/理学硕士|硕士/g, " ")
+    .replace(/[与及]/g, " ")
+    .replace(/master of science|msc|m\.s\.|\bms\b/g, " ")
+    .replace(/\b(?:in|and|with|of|the)\b|&/g, " ")
+    .replace(/[^a-z0-9\u4e00-\u9fff]+/g, "")
+    .trim();
+}
+
 function median(values) {
   const sorted = values.filter(Number.isFinite).slice().sort((a, b) => a - b);
   if (!sorted.length) return null;
@@ -227,7 +247,7 @@ export function getAiCandidates(data, profile) {
   const grouped = new Map();
   cases.forEach((item) => {
     const app = item.application;
-    const key = String(app.university) + "|" + String(app.program);
+    const key = String(app.university).trim().toLocaleLowerCase("zh-CN") + "|" + programKey(app.program);
     const current = grouped.get(key) || { item, scores: [], caseIds: [], samples: [], count: 0 };
     current.scores.push(effectiveScore(item.scores, app.country));
     current.caseIds.push(String(item.id));
@@ -269,6 +289,7 @@ export function getAiCandidates(data, profile) {
   // Keep a broad, evidence-backed pool. Target keywords influence ordering only;
   // they must not discard a valid project just because its name uses different wording.
   return candidates
+    .filter((candidate) => candidate.delta <= 6)
     .sort((a, b) => b.softRelevance - a.softRelevance || Math.abs(a.delta) - Math.abs(b.delta) || (a.rank === null ? 9999 : a.rank) - (b.rank === null ? 9999 : b.rank))
     .slice(0, 48);
 }
@@ -284,7 +305,7 @@ export function chooseAiTiers(candidates, fitScores = new Map()) {
     return chosen;
   };
   return {
-    challenge: pick((candidate) => candidate.delta >= 3.5, 4),
+    challenge: pick((candidate) => candidate.delta >= 3.5 && candidate.delta <= 6, 4),
     match: pick((candidate) => candidate.delta > -3.5 && candidate.delta < 3.5, 0),
     safe: pick((candidate) => candidate.delta <= -3.5, -4),
   };

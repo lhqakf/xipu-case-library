@@ -20,7 +20,6 @@ function boundedList(value, limit = 8) {
 function inferAverage(query) {
   const source = text(query);
   const match = source.match(/(?:均分|平均分|成绩|分数|绩点)[^0-9]{0,8}(\d{2,3}(?:\.\d+)?)/i)
-    || source.match(/(?:大一|大二|大三|大四|一年级|二年级|三年级|四年级|Y1|Y2|Y3|Y4)\s*(?:均分|平均分|成绩|分数)?[^0-9]{0,8}(\d{2,3}(?:\.\d+)?)/i)
     || source.match(/(?:^|[^\d.])(\d{2,3}(?:\.\d+)?)\s*(?:多|左右|上下)?\s*分(?!钟)/i);
   const value = numeric(match?.[1], null);
   return value !== null && value >= 0 && value <= 100 ? value : null;
@@ -57,7 +56,7 @@ function candidateKey(candidate) {
 
 function recommendationTier(candidate, applicantAverage) {
   if (!Number.isFinite(candidate.delta) || !Number.isFinite(applicantAverage)) return "match";
-  if (candidate.delta >= 3.5) return "challenge";
+  if (candidate.delta >= 3.5 && candidate.delta <= 6) return "challenge";
   if (candidate.delta <= -3.5) return "safe";
   return "match";
 }

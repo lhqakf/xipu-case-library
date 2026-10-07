@@ -52,6 +52,7 @@ const agentSystemPrompt = `你是西浦案例库 V4 Agent。你可以像普通 C
 - 城市不是当前案例库的独立字段时，必须说明这一限制，不得假装完成城市精确筛选。
 - 最终推荐中的 candidateKey、university、program 和 evidenceCaseIds 必须来自工具返回结果。
 - 冲刺、匹配、保底由 search_xipu_cases 按确定性成绩规则生成，模型不得根据学校名气、QS 排名或主观印象修改层级，也不得在 answer 中给出与工具 tier 冲突的分层判断。
+- 同一学校的同一项目只能出现一次且只能属于一个层级；历史基准比用户有效成绩高出超过 6 分的项目跨度过大，不得作为冲刺项目推荐。
 - 最终回答要区分历史案例证据、官方页面事实和一般性建议，不把历史案例当作录取概率。
 
 最终输出必须是合法 JSON，字段为 answer、needsClarification、clarificationQuestions 和 recommendations。answer 控制在 800 个汉字以内，recommendations 最多 8 条；不需要推荐时返回空数组。`;
@@ -419,6 +420,7 @@ export async function runAgent({
       let recommendations = Array.isArray(parsed.recommendations)
         ? parsed.recommendations.map((item) => sanitizeRecommendation(item, caseRegistry, sourceRegistry)).filter(Boolean).slice(0, MAX_RECOMMENDATIONS)
         : [];
+      recommendations = [...new Map(recommendations.map((item) => [item.candidateKey, item])).values()];
       if (!recommendations.length && hasScoreSignal(message) && caseRegistry.size) {
         recommendations = fallbackCaseRecommendations(caseRegistry);
       }
