@@ -268,6 +268,25 @@ test("Agent treats an explicit GPA as a case-search signal", async () => {
   assert.deepEqual(result.usedTools, ["search_xipu_cases"]);
 });
 
+test("Agent treats a third-year score without 分 as a case-search signal", async () => {
+  let calls = 0;
+  const fakeModel = async () => {
+    calls += 1;
+    return {
+      output_text: JSON.stringify({
+        answer: "已结合西浦历史案例进行分析。",
+        needsClarification: false,
+        clarificationQuestions: [],
+        recommendations: [],
+      }),
+    };
+  };
+  const result = await runAgent({ message: "我是应用数学，大三85，想申请英国", caseData: fixture, model: "test", requestModelResponse: fakeModel, webSearchEnabled: false });
+  assert.equal(calls, 2);
+  assert.deepEqual(result.usedTools, ["search_xipu_cases"]);
+  assert.equal(result.recommendations[0].caseIds[0], "XPU-TEST-1");
+});
+
 test("Agent repairs provider JSON with an unescaped newline and keeps recommendations", async () => {
   const candidate = searchXipuCases({
     query: "应用数学76分英国案例",

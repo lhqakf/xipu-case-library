@@ -141,7 +141,8 @@ function hasScoreSignal(message) {
   const scoreLabel = /(?:均分|平均分|成绩|分数|绩点)\s*(?:是|为|在|约|大约|:|：|=)?\s*\d{1,3}(?:\.\d+)?\s*(?:多|左右|上下)?\s*(?:分|\/\s*\d{1,3})?/i;
   const gpa = /\bGPA\s*(?:是|为|约|大约|:|：|=)?\s*\d(?:\.\d+)?(?:\s*\/\s*\d(?:\.\d+)?)?\b/i;
   const scoreWithUnit = /(?:^|[^\d.])(\d{2,3}(?:\.\d+)?)\s*(?:多|左右|上下)?\s*分(?!钟)/i;
-  return scoreLabel.test(text) || gpa.test(text) || scoreWithUnit.test(text);
+  const yearScore = /(?:大一|大二|大三|大四|一年级|二年级|三年级|四年级|Y1|Y2|Y3|Y4)\s*(?:均分|平均分|成绩|分数)?\s*(?:是|为|在|约|大约|:|：|=)?\s*\d{2,3}(?:\.\d+)?/i;
+  return scoreLabel.test(text) || gpa.test(text) || scoreWithUnit.test(text) || yearScore.test(text);
 }
 
 function normalizeParsedAgentPayload(parsed) {

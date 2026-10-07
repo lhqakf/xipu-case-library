@@ -275,11 +275,8 @@
 
   function renderAgentSources(sources) {
     if (!elements.aiAgentSources) return;
-    const cleanSources = Array.isArray(sources) ? sources.filter((source) => source?.url).slice(0, 8) : [];
-    elements.aiAgentSources.hidden = !cleanSources.length;
-    elements.aiAgentSources.innerHTML = cleanSources.length
-      ? `<div class="ai-agent-sources-head"><strong>参考来源</strong><span>联网检索到的官方页面</span></div><div class="ai-agent-sources-list">${cleanSources.map((source) => `<a href="${escapeHtml(source.url)}" target="_blank" rel="noopener noreferrer">${escapeHtml(source.title || source.url)}</a>`).join("")}</div>`
-      : "";
+    elements.aiAgentSources.hidden = true;
+    elements.aiAgentSources.replaceChildren();
   }
 
   function clearLegacyAgentHint() {
